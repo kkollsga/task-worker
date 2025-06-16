@@ -190,13 +190,14 @@
 
         getPriorityColor() {
             // Determine color based on importance and urgency combination
-            const importance = this.importance?.toUpperCase() || 'M';
-            const urgency = this.urgency?.toUpperCase() || 'M';
+            const importance = (this.importance || 'M').toUpperCase().trim();
+            const urgency = (this.urgency || 'M').toUpperCase().trim();
             
             if (importance === 'H' && urgency === 'H') return '#DC2626'; // red-600
             if (importance === 'H' || urgency === 'H') return '#F59E0B'; // amber-500
             if (importance === 'L' && urgency === 'L') return '#10B981'; // emerald-500
-            return '#6B7280'; // gray-500
+            if (importance === 'M' && urgency === 'M') return '#6B7280'; // gray-500
+            return '#6B7280'; // gray-500 for any other case
         }
 
         getPriorityLevel() {
@@ -1036,6 +1037,8 @@
             const isExpanded = this.stateManager.state.expandedCards.has(action.id);
             const description = action.getCardDescription();
             const hasStarRating = action.personalPriority > 0;
+            const isUrgent = (action.urgency || '').toUpperCase().trim() === 'H';
+            const isCompleted = action.progress === 100;
             
             // Add buffer logic for clipping
             const CLIP_LENGTH = 150;
@@ -1102,7 +1105,13 @@
                     </div>
                     
                     <div class="mt-auto pt-4">
-                        <div class="text-right mb-2">
+                        <div class="flex items-center justify-between mb-2">
+                            ${isUrgent && !isCompleted ? `
+                                <span class="text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Urgent!
+                                </span>
+                            ` : '<span></span>'}
                             <span class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                                 onclick="event.stopPropagation(); app.filter.toggleAssigneeFilter('${action.assignee}')">
                                 ${action.assignee}
