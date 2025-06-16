@@ -18,7 +18,7 @@
         <!-- Sidebar -->
         <div class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
             <div class="p-6">
-                <h1 class="text-xl font-semibold mb-6">Action Tracker</h1>
+                <h1 class="text-xl font-semibold mb-6">Task Worker</h1>
                 <nav class="space-y-1">
                     <a href="#" onclick="app.navigation.setView('overview')" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="overview">
                         <i class="fas fa-th-large mr-3 w-5"></i>
@@ -2082,7 +2082,6 @@
                                 placeholder="Type to assign..." 
                                 class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                 oninput="app.focus.updateAssignee('${action.id}', this.value)"
-                                onkeypress="if(event.key === 'Enter') app.focus.confirmAssignee('${action.id}', this.value)"
                                 onfocus="app.focus.showAssigneeSuggestions('${action.id}')"
                                 onblur="app.focus.hideAssigneeSuggestions()"
                                 autocomplete="off">
@@ -2242,9 +2241,11 @@
         }
 
         updateAssignee(actionId, value) {
-            // Update immediately but don't persist yet
             const action = this.stateManager.state.actions.get(actionId);
             if (!action) return;
+            
+            // Update assignee immediately on every input change
+            this.stateManager.updateAction(actionId, { assignee: value });
             
             // Filter suggestions based on input
             const projectAssignees = this.stateManager.getProjectAssignees(action.projectId);
@@ -2264,7 +2265,19 @@
                 } else if (value.trim()) {
                     suggestions.innerHTML = `
                         <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
-                            Press Enter to assign "${value}"
+                            New assignee: "${value}"
+                        </div>
+                    `;
+                } else {
+                    // Show all assignees if input is empty
+                    suggestions.innerHTML = projectAssignees.map(assignee => `
+                        <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                            onmousedown="app.focus.selectAssignee('${actionId}', '${assignee}')">
+                            ${assignee}
+                        </div>
+                    `).join('') || `
+                        <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
+                            No existing assignees in this project
                         </div>
                     `;
                 }
@@ -2482,7 +2495,7 @@
                                onchange="app.importExport.handleFileSelect(event)"
                                class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300"
                                aria-describedby="import-file-help">
-                        <p id="import-file-help" class="sr-only">Select a JSON file that was previously exported from Action Tracker</p>
+                        <p id="import-file-help" class="sr-only">Select a JSON file that was previously exported from Task Worker</p>
                         
                         <div id="file-preview" class="mt-4"></div>
                     </div>
