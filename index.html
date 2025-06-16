@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Action Tracker</title>
+    <title>Task Worker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1037,6 +1037,14 @@
             const description = action.getCardDescription();
             const hasStarRating = action.personalPriority > 0;
             
+            // Add buffer logic for clipping
+            const CLIP_LENGTH = 150;
+            const BUFFER = 10;
+            const shouldClip = description.length > (CLIP_LENGTH + BUFFER);
+            const displayDescription = shouldClip && !isExpanded ? 
+                description.substring(0, CLIP_LENGTH) + '...' : 
+                description;
+            
             return `
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 relative flex flex-col h-full border border-gray-200 dark:border-gray-700">
                     ${hasStarRating ? `
@@ -1084,9 +1092,9 @@
                     
                     <div class="cursor-pointer flex-grow" onclick="event.stopPropagation(); app.toggleCardExpansion('${action.id}')">
                         <p class="text-gray-700 dark:text-gray-300 mb-4 ${isExpanded ? '' : 'line-clamp-3 overflow-hidden'}">
-                            ${description}
+                            ${displayDescription}
                         </p>
-                        ${!isExpanded && description.length > 150 ? `
+                        ${!isExpanded && shouldClip ? `
                             <span class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
                                 Read more...
                             </span>
@@ -1242,6 +1250,33 @@
             const headers = project.excelHeaders;
             const data = project.tempExcelData;
             
+            // Function to match column names
+            const matchColumn = (header) => {
+                const normalized = header.toLowerCase().trim();
+                
+                // Define mapping rules for each column type
+                const mappingRules = {
+                    findingNumber: ['finding #', 'finding number', 'finding no', 'finding no.', 'finding', '#'],
+                    discipline: ['discipline', 'disciplines'],
+                    category: ['category', 'categories', 'cat'],
+                    observationFinding: ['observation/finding', 'observation', 'finding', 'observations', 'findings', 'observation finding', 'description'],
+                    impact: ['impact', 'impacts', 'consequence', 'consequences'],
+                    recommendation: ['recommendation', 'recommendations', 'action', 'actions', 'corrective action'],
+                    importance: ['importance', 'important', 'imp'],
+                    urgency: ['urgency', 'urgent', 'urg'],
+                    assignee: ['assignee', 'assigned to', 'assigned', 'responsible', 'owner', 'action party']
+                };
+                
+                // Check each mapping rule
+                for (const [columnType, variations] of Object.entries(mappingRules)) {
+                    if (variations.some(variation => normalized.includes(variation))) {
+                        return columnType;
+                    }
+                }
+                
+                return null;
+            };
+            
             return `
                 <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h4 class="font-medium mb-3">Preview & Column Mapping</h4>
@@ -1250,25 +1285,28 @@
                         <table class="w-full text-sm border-collapse">
                             <thead>
                                 <tr>
-                                    ${headers.map((header, index) => `
-                                        <th class="border border-gray-300 dark:border-gray-600 p-2 bg-gray-50 dark:bg-gray-900">
-                                            <div>${header}</div>
-                                            <select id="col-map-${index}" 
-                                                    onchange="app.project.updatePreviewColumnMapping(${index}, this.value)"
-                                                    class="mt-1 w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
-                                                <option value="">Unmapped</option>
-                                                <option value="findingNumber">Finding #</option>
-                                                <option value="discipline">Discipline</option>
-                                                <option value="category">Category</option>
-                                                <option value="observationFinding">Observation/Finding*</option>
-                                                <option value="impact">Impact</option>
-                                                <option value="recommendation">Recommendation</option>
-                                                <option value="importance">Importance</option>
-                                                <option value="urgency">Urgency</option>
-                                                <option value="assignee">Assignee</option>
-                                            </select>
-                                        </th>
-                                    `).join('')}
+                                    ${headers.map((header, index) => {
+                                        const matchedColumn = matchColumn(header);
+                                        return `
+                                            <th class="border border-gray-300 dark:border-gray-600 p-2 bg-gray-50 dark:bg-gray-900">
+                                                <div>${header}</div>
+                                                <select id="col-map-${index}" 
+                                                        onchange="app.project.updatePreviewColumnMapping(${index}, this.value)"
+                                                        class="mt-1 w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
+                                                    <option value="">Unmapped</option>
+                                                    <option value="findingNumber" ${matchedColumn === 'findingNumber' ? 'selected' : ''}>Finding #</option>
+                                                    <option value="discipline" ${matchedColumn === 'discipline' ? 'selected' : ''}>Discipline</option>
+                                                    <option value="category" ${matchedColumn === 'category' ? 'selected' : ''}>Category</option>
+                                                    <option value="observationFinding" ${matchedColumn === 'observationFinding' ? 'selected' : ''}>Observation/Finding*</option>
+                                                    <option value="impact" ${matchedColumn === 'impact' ? 'selected' : ''}>Impact</option>
+                                                    <option value="recommendation" ${matchedColumn === 'recommendation' ? 'selected' : ''}>Recommendation</option>
+                                                    <option value="importance" ${matchedColumn === 'importance' ? 'selected' : ''}>Importance</option>
+                                                    <option value="urgency" ${matchedColumn === 'urgency' ? 'selected' : ''}>Urgency</option>
+                                                    <option value="assignee" ${matchedColumn === 'assignee' ? 'selected' : ''}>Assignee</option>
+                                                </select>
+                                            </th>
+                                        `;
+                                    }).join('')}
                                 </tr>
                             </thead>
                             <tbody>
@@ -1897,10 +1935,19 @@
             if (action.discipline && action.category) header += ' - ';
             if (action.category) header += action.category;
             
+            // Create a single-line preview of the observation/finding
+            const observationPreview = action.observationFinding ? 
+                (action.observationFinding.length > 100 ? 
+                    action.observationFinding.substring(0, 100) + '...' : 
+                    action.observationFinding) : '';
+            
             return `
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
                     <div class="p-8">
-                        <h1 class="text-3xl font-bold mb-4">${header || 'Action Details'}</h1>
+                        <h1 class="text-3xl font-bold mb-2">${header || 'Action Details'}</h1>
+                        ${observationPreview ? `
+                            <p class="text-gray-600 dark:text-gray-400 mb-4 line-clamp-1">${observationPreview}</p>
+                        ` : ''}
                         <div class="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
                             ${action.findingNumber ? `
                                 <span class="flex items-center gap-2">
