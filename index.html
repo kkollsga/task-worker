@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Action Tracker</title>
+    <title>Task Worker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
@@ -1323,8 +1324,27 @@
             
             if (!textarea || !textarea.value.trim() || !project) return;
             
-            const rows = textarea.value.trim().split('\n').map(row => row.split('\t'));
-            if (rows.length < 2) return;
+            // Use PapaParse to parse TSV data
+            const parseResult = Papa.parse(textarea.value.trim(), {
+                delimiter: '\t',  // Tab-delimited
+                header: false,    // We'll handle headers manually
+                skipEmptyLines: true,
+                quoteChar: '"',   // Handle quoted cells
+                escapeChar: '"',  // Handle escaped quotes
+                dynamicTyping: false  // Keep everything as strings
+            });
+            
+            if (parseResult.errors.length > 0) {
+                console.error('Parse errors:', parseResult.errors);
+                alert('Error parsing data. Please check your Excel data and try again.');
+                return;
+            }
+            
+            const rows = parseResult.data;
+            if (rows.length < 2) {
+                alert('Please include at least a header row and one data row.');
+                return;
+            }
             
             project.excelHeaders = rows[0];
             project.tempExcelData = rows.slice(1);
