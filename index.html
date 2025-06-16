@@ -295,6 +295,7 @@
                 selectedProjectId: null,
                 currentView: 'overview',
                 focusActionId: null,
+                editingAssigneeId: null,
                 filters: {
                     search: '',
                     projectIds: new Set(),
@@ -1945,11 +1946,14 @@
                     action.observationFinding.substring(0, 100) + '...' : 
                     action.observationFinding) : '';
             
+            const projectAssignees = this.stateManager.getProjectAssignees(action.projectId);
+            const isEditingAssignee = this.stateManager.state.editingAssigneeId === action.id;
+            
             return `
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                    <div class="p-8 flex gap-8">
-                        <!-- Left side - 70% -->
-                        <div class="flex-1" style="flex: 0 0 70%;">
+                    <div class="p-8 flex gap-6">
+                        <!-- Left side - 65% -->
+                        <div class="flex-1" style="flex: 0 0 65%;">
                             <h1 class="text-3xl font-bold mb-2">${header || 'Action Details'}</h1>
                             ${observationPreview ? `
                                 <p class="text-gray-600 dark:text-gray-400 mb-4 line-clamp-1">${observationPreview}</p>
@@ -1965,19 +1969,59 @@
                                     <i class="fas fa-folder"></i>
                                     <span>${project ? project.name : ''}</span>
                                 </span>
-                                <span class="flex items-center gap-2">
+                                <span class="flex items-center gap-2 relative">
                                     <i class="fas fa-user"></i>
-                                    <span>${action.assignee}</span>
+                                    ${isEditingAssignee ? `
+                                        <div class="relative">
+                                            <input type="text" 
+                                                id="assignee-input"
+                                                name="assignee"
+                                                value="${action.assignee}" 
+                                                placeholder="Type to assign..." 
+                                                class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                                oninput="app.focus.updateAssignee('${action.id}', this.value)"
+                                                onkeypress="if(event.key === 'Enter') app.focus.hideAssigneeEdit('${action.id}')"
+                                                onblur="app.focus.hideAssigneeEditDelayed('${action.id}')"
+                                                onfocus="app.focus.showAssigneeSuggestions('${action.id}')"
+                                                autocomplete="off">
+                                            
+                                            <!-- Suggestions dropdown -->
+                                            <div id="assignee-suggestions" 
+                                                class="absolute z-10 w-48 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto">
+                                                ${projectAssignees.map(assignee => `
+                                                    <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors text-sm"
+                                                        onmousedown="app.focus.selectAssignee('${action.id}', '${assignee}')">
+                                                        ${assignee}
+                                                    </div>
+                                                `).join('')}
+                                                ${projectAssignees.length === 0 ? `
+                                                    <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
+                                                        No existing assignees
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <span class="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                            onclick="app.focus.showAssigneeEdit('${action.id}')">
+                                            ${action.assignee}
+                                        </span>
+                                    `}
                                 </span>
                                 <span class="flex items-center gap-2">
                                     <i class="fas fa-clock"></i>
                                     <span>Modified ${new Date(action.lastModified).toLocaleDateString()}</span>
                                 </span>
                             </div>
+                            ${action.originalAssignee && action.originalAssignee !== action.assignee ? `
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-7">
+                                    Originally: <span class="text-red-600 dark:text-red-400">${action.originalAssignee}</span>
+                                </p>
+                            ` : ''}
                         </div>
                         
-                        <!-- Right side - 30% -->
-                        <div class="flex-none" style="flex: 0 0 30%;">
+                        <!-- Right side - 35% with padding -->
+                        <div class="flex-none pl-4" style="flex: 0 0 35%;">
                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wider text-center">Priority Rating</h3>
                                 <div class="flex gap-2 justify-center" id="star-rating-container" role="radiogroup" aria-label="Priority rating">
@@ -2007,10 +2051,18 @@
         }
 
         renderDetailsSection(action) {
-            const importanceColor = action.importance?.toUpperCase() === 'H' ? '#DC2626' :
-                                action.importance?.toUpperCase() === 'L' ? '#10B981' : '#6B7280';
-            const urgencyColor = action.urgency?.toUpperCase() === 'H' ? '#DC2626' :
-                                action.urgency?.toUpperCase() === 'L' ? '#10B981' : '#6B7280';
+            const importanceLevel = action.importance?.toUpperCase() || 'M';
+            const urgencyLevel = action.urgency?.toUpperCase() || 'M';
+            
+            const importanceText = importanceLevel === 'H' ? 'High' : 
+                                importanceLevel === 'L' ? 'Low' : 'Medium';
+            const urgencyText = urgencyLevel === 'H' ? 'High' : 
+                            urgencyLevel === 'L' ? 'Low' : 'Medium';
+            
+            const importanceColor = importanceLevel === 'H' ? '#DC2626' :
+                                importanceLevel === 'L' ? '#10B981' : '#6B7280';
+            const urgencyColor = urgencyLevel === 'H' ? '#DC2626' :
+                                urgencyLevel === 'L' ? '#10B981' : '#6B7280';
             
             return `
                 <div class="space-y-6">
@@ -2024,14 +2076,14 @@
                                         <span class="font-semibold text-gray-600 dark:text-gray-400">Importance:</span>
                                         <span class="inline-flex items-center gap-1">
                                             <span class="w-3 h-3 rounded-full" style="background-color: ${importanceColor}"></span>
-                                            <span class="font-bold">${action.importance?.toUpperCase() || 'M'}</span>
+                                            <span class="font-bold">${importanceText}</span>
                                         </span>
                                     </span>
                                     <span class="flex items-center gap-2">
                                         <span class="font-semibold text-gray-600 dark:text-gray-400">Urgency:</span>
                                         <span class="inline-flex items-center gap-1">
                                             <span class="w-3 h-3 rounded-full" style="background-color: ${urgencyColor}"></span>
-                                            <span class="font-bold">${action.urgency?.toUpperCase() || 'M'}</span>
+                                            <span class="font-bold">${urgencyText}</span>
                                         </span>
                                     </span>
                                 </div>
@@ -2061,50 +2113,8 @@
         }
 
         renderEditableSection(action) {
-            const projectAssignees = this.stateManager.getProjectAssignees(action.projectId);
-            
             return `
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 border border-gray-200 dark:border-gray-700">
-                    <!-- Assignee -->
-                    <div class="mb-8">
-                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wider">Assignee</h3>
-                        <div class="relative">
-                            <label for="assignee-input" class="sr-only">Assignee</label>
-                            <input type="text" 
-                                id="assignee-input"
-                                name="assignee"
-                                value="${action.assignee}" 
-                                placeholder="Type to assign..." 
-                                class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                oninput="app.focus.updateAssignee('${action.id}', this.value)"
-                                onfocus="app.focus.showAssigneeSuggestions('${action.id}')"
-                                onblur="app.focus.hideAssigneeSuggestions()"
-                                autocomplete="off">
-                            <i class="fas fa-user absolute right-4 top-3.5 text-gray-400"></i>
-                            
-                            <!-- Suggestions dropdown -->
-                            <div id="assignee-suggestions" 
-                                class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto">
-                                ${projectAssignees.map(assignee => `
-                                    <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                                        onmousedown="app.focus.selectAssignee('${action.id}', '${assignee}')">
-                                        ${assignee}
-                                    </div>
-                                `).join('')}
-                                ${projectAssignees.length === 0 ? `
-                                    <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
-                                        No existing assignees in this project
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                        ${action.originalAssignee && action.originalAssignee !== action.assignee ? `
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                Originally assigned to: <span class="text-red-600 dark:text-red-400">${action.originalAssignee}</span>
-                            </p>
-                        ` : ''}
-                    </div>
-                    
                     <!-- Progress -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
@@ -2194,7 +2204,105 @@
             `;
         }
 
-        // Focus mode methods
+        // Assignee editing methods
+        showAssigneeEdit(actionId) {
+            this.stateManager.state.editingAssigneeId = actionId;
+            app.renderManager.render();
+            // Focus on input after render
+            setTimeout(() => {
+                const input = document.getElementById('assignee-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 0);
+        }
+
+        hideAssigneeEdit(actionId) {
+            this.stateManager.state.editingAssigneeId = null;
+            app.renderManager.render();
+        }
+
+        hideAssigneeEditDelayed(actionId) {
+            // Delay to allow clicking on suggestions
+            setTimeout(() => {
+                if (this.stateManager.state.editingAssigneeId === actionId) {
+                    this.hideAssigneeEdit(actionId);
+                }
+            }, 200);
+        }
+
+        updateAssignee(actionId, value) {
+            const action = this.stateManager.state.actions.get(actionId);
+            if (!action) return;
+            
+            // Update assignee immediately on every input change
+            this.stateManager.updateAction(actionId, { assignee: value });
+            
+            // Filter suggestions based on input
+            const projectAssignees = this.stateManager.getProjectAssignees(action.projectId);
+            const suggestions = document.getElementById('assignee-suggestions');
+            if (suggestions) {
+                const filtered = projectAssignees.filter(assignee => 
+                    assignee.toLowerCase().includes(value.toLowerCase())
+                );
+                
+                if (filtered.length > 0 && value.trim()) {
+                    suggestions.innerHTML = filtered.map(assignee => `
+                        <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors text-sm"
+                            onmousedown="app.focus.selectAssignee('${actionId}', '${assignee}')">
+                            ${assignee}
+                        </div>
+                    `).join('');
+                } else if (value.trim()) {
+                    suggestions.innerHTML = `
+                        <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
+                            New assignee: "${value}"
+                        </div>
+                    `;
+                } else {
+                    // Show all assignees if input is empty
+                    suggestions.innerHTML = projectAssignees.map(assignee => `
+                        <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors text-sm"
+                            onmousedown="app.focus.selectAssignee('${actionId}', '${assignee}')">
+                            ${assignee}
+                        </div>
+                    `).join('') || `
+                        <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
+                            No existing assignees in this project
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        showAssigneeSuggestions(actionId) {
+            const suggestions = document.getElementById('assignee-suggestions');
+            if (suggestions) {
+                suggestions.classList.remove('hidden');
+            }
+        }
+
+        hideAssigneeSuggestions() {
+            // Small delay to allow clicking on suggestions
+            setTimeout(() => {
+                const suggestions = document.getElementById('assignee-suggestions');
+                if (suggestions) {
+                    suggestions.classList.add('hidden');
+                }
+            }, 200);
+        }
+
+        selectAssignee(actionId, assignee) {
+            const input = document.getElementById('assignee-input');
+            if (input) {
+                input.value = assignee;
+            }
+            this.stateManager.updateAction(actionId, { assignee });
+            this.hideAssigneeSuggestions();
+        }
+
+        // Star rating methods
         setStarRating(rating) {
             const actionId = this.stateManager.state.focusActionId;
             if (!actionId) return;
@@ -2235,76 +2343,7 @@
             });
         }
 
-        updateAssignee(actionId, value) {
-            const action = this.stateManager.state.actions.get(actionId);
-            if (!action) return;
-            
-            // Update assignee immediately on every input change
-            this.stateManager.updateAction(actionId, { assignee: value });
-            
-            // Filter suggestions based on input
-            const projectAssignees = this.stateManager.getProjectAssignees(action.projectId);
-            const suggestions = document.getElementById('assignee-suggestions');
-            if (suggestions) {
-                const filtered = projectAssignees.filter(assignee => 
-                    assignee.toLowerCase().includes(value.toLowerCase())
-                );
-                
-                if (filtered.length > 0 && value.trim()) {
-                    suggestions.innerHTML = filtered.map(assignee => `
-                        <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                            onmousedown="app.focus.selectAssignee('${actionId}', '${assignee}')">
-                            ${assignee}
-                        </div>
-                    `).join('');
-                } else if (value.trim()) {
-                    suggestions.innerHTML = `
-                        <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
-                            New assignee: "${value}"
-                        </div>
-                    `;
-                } else {
-                    // Show all assignees if input is empty
-                    suggestions.innerHTML = projectAssignees.map(assignee => `
-                        <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                            onmousedown="app.focus.selectAssignee('${actionId}', '${assignee}')">
-                            ${assignee}
-                        </div>
-                    `).join('') || `
-                        <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
-                            No existing assignees in this project
-                        </div>
-                    `;
-                }
-            }
-        }
-
-        showAssigneeSuggestions(actionId) {
-            const suggestions = document.getElementById('assignee-suggestions');
-            if (suggestions) {
-                suggestions.classList.remove('hidden');
-            }
-        }
-
-        hideAssigneeSuggestions() {
-            // Small delay to allow clicking on suggestions
-            setTimeout(() => {
-                const suggestions = document.getElementById('assignee-suggestions');
-                if (suggestions) {
-                    suggestions.classList.add('hidden');
-                }
-            }, 200);
-        }
-
-        selectAssignee(actionId, assignee) {
-            const input = document.getElementById('assignee-input');
-            if (input) {
-                input.value = assignee;
-            }
-            this.stateManager.updateAction(actionId, { assignee });
-            this.hideAssigneeSuggestions();
-        }
-
+        // Progress method
         updateProgress(value) {
             const actionId = this.stateManager.state.focusActionId;
             if (!actionId) return;
@@ -2314,10 +2353,12 @@
             if (progressValue) progressValue.textContent = value + '%';
         }
 
+        // Comment method
         updateComment(actionId, value) {
             this.debouncedUpdateComment(actionId, value);
         }
 
+        // Task methods
         addTask() {
             const actionId = this.stateManager.state.focusActionId;
             const input = document.getElementById('new-task');
