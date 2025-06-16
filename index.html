@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Worker</title>
+    <title>Action Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -145,6 +145,7 @@
             
             this.personalPriority = data.personalPriority || 0;
             this.assignee = data.assignee || 'Unassigned';
+            this.originalAssignee = data.originalAssignee || data.assignee || 'Unassigned'; // Track original assignee
             this.progress = data.progress || 0;
             this.tags = data.tags || [];
             this.projectId = data.projectId || null;
@@ -170,6 +171,7 @@
                 urgency: this.urgency,
                 personalPriority: this.personalPriority,
                 assignee: this.assignee,
+                originalAssignee: this.originalAssignee,
                 progress: this.progress,
                 tags: this.tags,
                 projectId: this.projectId,
@@ -500,6 +502,21 @@
             const assignees = new Set();
             this.state.actions.forEach(action => {
                 assignees.add(action.assignee);
+            });
+            return Array.from(assignees).sort();
+        }
+
+        getProjectAssignees(projectId) {
+            const assignees = new Set();
+            this.state.actions.forEach(action => {
+                if (action.projectId === projectId) {
+                    if (action.assignee && action.assignee !== 'Unassigned') {
+                        assignees.add(action.assignee);
+                    }
+                    if (action.originalAssignee && action.originalAssignee !== 'Unassigned') {
+                        assignees.add(action.originalAssignee);
+                    }
+                }
             });
             return Array.from(assignees).sort();
         }
@@ -1421,6 +1438,7 @@
                     urgency: mappings.urgency !== null ? row[mappings.urgency] : '',
                     projectId: projectId,
                     assignee: mappings.assignee !== null ? row[mappings.assignee] || 'Unassigned' : 'Unassigned',
+                    originalAssignee: mappings.assignee !== null ? row[mappings.assignee] || 'Unassigned' : 'Unassigned',
                     excelRowData: [...row]
                 });
                 
@@ -1553,17 +1571,23 @@
                                                     ${isEditMode ? `onclick="app.tableEditor.startCellEdit(${rowIndex}, ${colIndex}, '${action.id}')"` : ''}>
                                                     ${colIndex === project.columnMapping.observationFinding && !isEditMode ? `
                                                         <span class="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors" 
-                                                              onclick="app.selectActionForFocus('${action.id}')">
+                                                            onclick="app.selectActionForFocus('${action.id}')">
                                                             ${cell || ''}
                                                         </span>
+                                                    ` : colIndex === project.columnMapping.assignee && !isEditMode && action.originalAssignee !== action.assignee ? `
+                                                        <div>
+                                                            <span class="text-red-600 dark:text-red-400 line-through">${action.originalAssignee}</span>
+                                                            <br>
+                                                            <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
+                                                        </div>
                                                     ` : isEditMode && this.stateManager.state.activeCell.row === rowIndex && this.stateManager.state.activeCell.col === colIndex ? `
                                                         <input type="text" 
-                                                               id="active-cell-input"
-                                                               name="active-cell-input"
-                                                               value="${cell || ''}" 
-                                                               onblur="app.tableEditor.saveCellEdit('${action.id}', ${colIndex}, this.value)"
-                                                               onkeydown="app.tableEditor.handleCellKeydown(event, ${rowIndex}, ${colIndex}, '${action.id}')"
-                                                               class="w-full px-1 py-0 border-0 bg-transparent focus:outline-none">
+                                                            id="active-cell-input"
+                                                            name="active-cell-input"
+                                                            value="${cell || ''}" 
+                                                            onblur="app.tableEditor.saveCellEdit('${action.id}', ${colIndex}, this.value)"
+                                                            onkeydown="app.tableEditor.handleCellKeydown(event, ${rowIndex}, ${colIndex}, '${action.id}')"
+                                                            class="w-full px-1 py-0 border-0 bg-transparent focus:outline-none">
                                                     ` : cell || ''}
                                                 </td>
                                             `).join('')}
@@ -1995,8 +2019,51 @@
         }
 
         renderEditableSection(action) {
+            const projectAssignees = this.stateManager.getProjectAssignees(action.projectId);
+            
             return `
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 border border-gray-200 dark:border-gray-700">
+                    <!-- Assignee -->
+                    <div class="mb-8">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wider">Assignee</h3>
+                        <div class="relative">
+                            <label for="assignee-input" class="sr-only">Assignee</label>
+                            <input type="text" 
+                                id="assignee-input"
+                                name="assignee"
+                                value="${action.assignee}" 
+                                placeholder="Type to assign..." 
+                                class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                oninput="app.focus.updateAssignee('${action.id}', this.value)"
+                                onkeypress="if(event.key === 'Enter') app.focus.confirmAssignee('${action.id}', this.value)"
+                                onfocus="app.focus.showAssigneeSuggestions('${action.id}')"
+                                onblur="app.focus.hideAssigneeSuggestions()"
+                                autocomplete="off">
+                            <i class="fas fa-user absolute right-4 top-3.5 text-gray-400"></i>
+                            
+                            <!-- Suggestions dropdown -->
+                            <div id="assignee-suggestions" 
+                                class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto">
+                                ${projectAssignees.map(assignee => `
+                                    <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                                        onmousedown="app.focus.selectAssignee('${action.id}', '${assignee}')">
+                                        ${assignee}
+                                    </div>
+                                `).join('')}
+                                ${projectAssignees.length === 0 ? `
+                                    <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
+                                        No existing assignees in this project
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${action.originalAssignee && action.originalAssignee !== action.assignee ? `
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                Originally assigned to: <span class="text-red-600 dark:text-red-400">${action.originalAssignee}</span>
+                            </p>
+                        ` : ''}
+                    </div>
+                    
                     <!-- Progress -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
@@ -2004,14 +2071,14 @@
                             <span class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="progress-value">${action.progress}%</span>
                         </div>
                         <input type="range" 
-                               id="progress-slider"
-                               name="progress"
-                               min="0" 
-                               max="100" 
-                               value="${action.progress}" 
-                               oninput="app.focus.updateProgress(this.value)"
-                               class="w-full cursor-pointer"
-                               aria-label="Progress percentage">
+                            id="progress-slider"
+                            name="progress"
+                            min="0" 
+                            max="100" 
+                            value="${action.progress}" 
+                            oninput="app.focus.updateProgress(this.value)"
+                            class="w-full cursor-pointer"
+                            aria-label="Progress percentage">
                         <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mt-2">
                             <span>Not Started</span>
                             <span>In Progress</span>
@@ -2025,11 +2092,11 @@
                         <div class="relative">
                             <label for="comment-input" class="sr-only">Comment</label>
                             <textarea id="comment-input" 
-                                      name="comment"
-                                      placeholder="Add a comment..." 
-                                      class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                                      rows="3"
-                                      oninput="app.focus.updateComment('${action.id}', this.value)">${action.comment || ''}</textarea>
+                                    name="comment"
+                                    placeholder="Add a comment..." 
+                                    class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                                    rows="3"
+                                    oninput="app.focus.updateComment('${action.id}', this.value)">${action.comment || ''}</textarea>
                             <i class="fas fa-comment-dots absolute right-4 top-3.5 text-gray-400"></i>
                         </div>
                     </div>
@@ -2042,19 +2109,19 @@
                                 ${action.taskList.map((task, index) => `
                                     <div class="group flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-gray-700">
                                         <input type="checkbox" 
-                                               id="task-${index}"
-                                               name="task-${index}"
-                                               ${task.completed ? 'checked' : ''} 
-                                               onchange="app.focus.toggleTask(${index})"
-                                               class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-                                               aria-label="Task checkbox">
+                                            id="task-${index}"
+                                            name="task-${index}"
+                                            ${task.completed ? 'checked' : ''} 
+                                            onchange="app.focus.toggleTask(${index})"
+                                            class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                            aria-label="Task checkbox">
                                         <label for="task-input-${index}" class="sr-only">Task text</label>
                                         <input type="text" 
-                                               id="task-input-${index}"
-                                               name="task-input-${index}"
-                                               value="${task.text}" 
-                                               onchange="app.focus.updateTaskText(${index}, this.value)"
-                                               class="flex-1 bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-700 dark:text-gray-300'}">
+                                            id="task-input-${index}"
+                                            name="task-input-${index}"
+                                            value="${task.text}" 
+                                            onchange="app.focus.updateTaskText(${index}, this.value)"
+                                            class="flex-1 bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-700 dark:text-gray-300'}">
                                         <button onclick="app.focus.deleteTask(${index})" 
                                                 class="text-red-600 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 p-2"
                                                 aria-label="Delete task">
@@ -2069,11 +2136,11 @@
                             <div class="relative">
                                 <label for="new-task" class="sr-only">New task</label>
                                 <input type="text" 
-                                       id="new-task" 
-                                       name="new-task"
-                                       placeholder="Add a new task..." 
-                                       class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                       onkeypress="if(event.key === 'Enter') app.focus.addTask()">
+                                    id="new-task" 
+                                    name="new-task"
+                                    placeholder="Add a new task..." 
+                                    class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    onkeypress="if(event.key === 'Enter') app.focus.addTask()">
                                 <button onclick="app.focus.addTask()" 
                                         class="absolute right-2 top-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
                                         aria-label="Add task">
@@ -2125,6 +2192,62 @@
                 }
                 star.classList.remove('text-yellow-300');
             });
+        }
+
+        updateAssignee(actionId, value) {
+            // Update immediately but don't persist yet
+            const action = this.stateManager.state.actions.get(actionId);
+            if (!action) return;
+            
+            // Filter suggestions based on input
+            const projectAssignees = this.stateManager.getProjectAssignees(action.projectId);
+            const suggestions = document.getElementById('assignee-suggestions');
+            if (suggestions) {
+                const filtered = projectAssignees.filter(assignee => 
+                    assignee.toLowerCase().includes(value.toLowerCase())
+                );
+                
+                if (filtered.length > 0 && value.trim()) {
+                    suggestions.innerHTML = filtered.map(assignee => `
+                        <div class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                            onmousedown="app.focus.selectAssignee('${actionId}', '${assignee}')">
+                            ${assignee}
+                        </div>
+                    `).join('');
+                } else if (value.trim()) {
+                    suggestions.innerHTML = `
+                        <div class="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
+                            Press Enter to assign "${value}"
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        showAssigneeSuggestions(actionId) {
+            const suggestions = document.getElementById('assignee-suggestions');
+            if (suggestions) {
+                suggestions.classList.remove('hidden');
+            }
+        }
+
+        hideAssigneeSuggestions() {
+            // Small delay to allow clicking on suggestions
+            setTimeout(() => {
+                const suggestions = document.getElementById('assignee-suggestions');
+                if (suggestions) {
+                    suggestions.classList.add('hidden');
+                }
+            }, 200);
+        }
+
+        selectAssignee(actionId, assignee) {
+            const input = document.getElementById('assignee-input');
+            if (input) {
+                input.value = assignee;
+            }
+            this.stateManager.updateAction(actionId, { assignee });
+            this.hideAssigneeSuggestions();
         }
 
         updateProgress(value) {
