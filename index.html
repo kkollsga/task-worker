@@ -1554,6 +1554,10 @@
                         <div class="flex justify-between items-center p-6 pb-4">
                             <h3 class="text-lg font-semibold">Imported Excel Data</h3>
                             <div class="flex gap-2">
+                                <button onclick="app.tableEditor.copyTableToClipboard()" 
+                                        class="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                                    <i class="fas fa-copy mr-1"></i>Copy Table
+                                </button>
                                 <button onclick="app.tableEditor.addColumn()" 
                                         class="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                                     <i class="fas fa-plus mr-1"></i>Add Column
@@ -1652,6 +1656,59 @@
                     </div>
                 </div>
             `;
+        }
+
+        copyTableToClipboard() {
+            const project = this.stateManager.state.projects.get(this.stateManager.state.selectedProjectId);
+            if (!project) return;
+            
+            const actions = this.stateManager.getProjectActions(project.id);
+            
+            // Build the table data as tab-separated values
+            let tableData = '';
+            
+            // Add headers
+            const headers = [...project.excelHeaders, 'Comment'];
+            tableData += headers.join('\t') + '\n';
+            
+            // Add data rows
+            actions.forEach(action => {
+                const row = [...action.excelRowData];
+                // Add comment column
+                row.push(action.getAllComments());
+                
+                // Escape tabs and newlines in cell values and wrap in quotes if needed
+                const processedRow = row.map(cell => {
+                    const cellValue = cell || '';
+                    // If cell contains tab, newline, or quote, wrap in quotes and escape quotes
+                    if (cellValue.includes('\t') || cellValue.includes('\n') || cellValue.includes('"')) {
+                        return '"' + cellValue.replace(/"/g, '""') + '"';
+                    }
+                    return cellValue;
+                });
+                
+                tableData += processedRow.join('\t') + '\n';
+            });
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(tableData).then(() => {
+                // Show success feedback
+                const button = event.target.closest('button');
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check mr-1"></i>Copied!';
+                button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                button.classList.add('bg-green-600', 'hover:bg-green-700');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy table:', err);
+                alert('Failed to copy table to clipboard');
+            });
         }
 
         getColumnIcon(project, index) {
