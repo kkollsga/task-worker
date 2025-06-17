@@ -1965,12 +1965,14 @@
             const isEditingAssignee = this.stateManager.state.editingAssigneeId === action.id;
             
             return `
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-                    <h1 class="text-3xl font-bold mb-2">${header || 'Action Details'}</h1>
-                    ${observationPreview ? `
-                        <p class="text-gray-600 dark:text-gray-400 mb-4 line-clamp-1">${observationPreview}</p>
-                    ` : ''}
-                    <div class="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700 h-full flex flex-col">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2">${header || 'Action Details'}</h1>
+                        ${observationPreview ? `
+                            <p class="text-gray-600 dark:text-gray-400 mb-4 line-clamp-1">${observationPreview}</p>
+                        ` : ''}
+                    </div>
+                    <div class="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400 mt-auto">
                         ${action.findingNumber ? `
                             <span class="flex items-center gap-2">
                                 <i class="fas fa-hashtag"></i>
