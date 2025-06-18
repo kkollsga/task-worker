@@ -117,10 +117,29 @@
                 <!-- Filter section container -->
                 <div id="sidebar-filter-section" class="transition-all duration-300 max-h-0 overflow-hidden">
                     <div class="border-t border-gray-200 dark:border-gray-700 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                        <div class="p-4 space-y-6">
+                        <div class="p-3 space-y-3">
+                            <!-- Sort Section -->
+                            <div class="pb-2">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <i class="fas fa-sort text-xs text-gray-500 dark:text-gray-400"></i>
+                                    <label for="sidebar-sort-select" class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Sort By</label>
+                                </div>
+                                <select id="sidebar-sort-select"
+                                        name="sort"
+                                        onchange="app.filter.setSortOrder(this.value)" 
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="createdAt">Entry Order</option>
+                                    <option value="lastModified">Last Modified</option>
+                                    <option value="alphabetical">Alphabetical</option>
+                                    <option value="originalPriority">Priority (High to Low)</option>
+                                    <option value="priority">Star Priority</option>
+                                    <option value="progress">Progress Order</option>
+                                </select>
+                            </div>
+
                             <!-- Search Section -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 pb-2">
+                                <div class="flex items-center gap-2 mb-0.5">
                                     <i class="fas fa-search text-xs text-gray-500 dark:text-gray-400"></i>
                                     <label for="sidebar-search-input" class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Search</label>
                                 </div>
@@ -133,35 +152,16 @@
                                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             </div>
                             
-                            <!-- Sort Section -->
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i class="fas fa-sort text-xs text-gray-500 dark:text-gray-400"></i>
-                                    <label for="sidebar-sort-select" class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Sort By</label>
-                                </div>
-                                <select id="sidebar-sort-select"
-                                        name="sort"
-                                        onchange="app.filter.setSortOrder(this.value)" 
-                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                    <option value="originalPriority">Priority (High to Low)</option>
-                                    <option value="lastModified">Last Modified</option>
-                                    <option value="alphabetical">Alphabetical</option>
-                                    <option value="createdAt">Entry Order</option>
-                                    <option value="priority">Star Priority</option>
-                                    <option value="progress">Progress Order</option>
-                                </select>
-                            </div>
-                            
                             <!-- Priority Filters Section -->
-                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                                <div class="flex items-center gap-2 mb-3">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+                                <div class="flex items-center gap-2 mb-0.5">
                                     <i class="fas fa-exclamation-circle text-xs text-gray-500 dark:text-gray-400"></i>
                                     <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Priority Filters</h3>
                                 </div>
                                 
                                 <!-- Priority Levels -->
                                 <div class="ml-4 space-y-1">
-                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1">
                                         <input type="checkbox" 
                                             id="priority-critical"
                                             name="priority-level"
@@ -171,7 +171,7 @@
                                         <span class="w-3 h-3 rounded-full bg-red-600 mr-2"></span>
                                         <span class="text-gray-600 dark:text-gray-400">Critical</span>
                                     </label>
-                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1">
                                         <input type="checkbox" 
                                             id="priority-high"
                                             name="priority-level"
@@ -181,7 +181,7 @@
                                         <span class="w-3 h-3 rounded-full bg-amber-500 mr-2"></span>
                                         <span class="text-gray-600 dark:text-gray-400">High</span>
                                     </label>
-                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1">
                                         <input type="checkbox" 
                                             id="priority-medium"
                                             name="priority-level"
@@ -191,7 +191,7 @@
                                         <span class="w-3 h-3 rounded-full bg-gray-500 mr-2"></span>
                                         <span class="text-gray-600 dark:text-gray-400">Medium</span>
                                     </label>
-                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1">
                                         <input type="checkbox" 
                                             id="priority-low"
                                             name="priority-level"
@@ -204,8 +204,8 @@
                                 </div>
                                 
                                 <!-- Urgency Filter -->
-                                <div class="mb-3">
-                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -mx-2">
+                                <div class="ml-3 mt-1">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded pb-1 -mx-2">
                                         <input type="checkbox" 
                                             id="sidebar-urgency-filter"
                                             name="urgency-filter"
@@ -219,8 +219,8 @@
                                 </div>
                                 
                                 <!-- Star Rating Filter -->
-                                <div class="mb-3">
-                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -mx-2">
+                                <div class="ml-3">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded -mx-2">
                                         <input type="checkbox" 
                                             id="sidebar-rating-filter"
                                             name="rating-filter"
@@ -235,8 +235,8 @@
                             </div>
                             
                             <!-- Status & Progress Section -->
-                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                                <div class="flex items-center gap-2 mb-3">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 pb-2">
+                                <div class="flex items-center gap-2 mb-0.5">
                                     <i class="fas fa-tasks text-xs text-gray-500 dark:text-gray-400"></i>
                                     <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</h3>
                                 </div>
@@ -253,20 +253,20 @@
                             
                             <!-- Organization Section -->
                             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                                <div class="flex items-center gap-2 mb-3">
+                                <div class="flex items-center gap-2 mb-0.5">
                                     <i class="fas fa-sitemap text-xs text-gray-500 dark:text-gray-400"></i>
                                     <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Organization</h3>
                                 </div>
                                 
                                 <!-- Projects filter -->
-                                <div id="sidebar-projects-filter" class="mb-4"></div>
+                                <div id="sidebar-projects-filter" class="mb-2 ml-4"></div>
                                 
                                 <!-- Assignees filter -->
-                                <div id="sidebar-assignees-filter"></div>
+                                <div id="sidebar-assignees-filter" class="ml-4"></div>
                             </div>
                             
                             <!-- Clear filters -->
-                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-2">
                                 <button onclick="app.filter.clearAllFilters()" 
                                         class="w-full px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium">
                                     <i class="fas fa-times mr-2"></i>Clear All Filters
@@ -1283,14 +1283,14 @@ class FilterManager {
         const projectsContainer = document.getElementById('sidebar-projects-filter');
         if (projectsContainer) {
             projectsContainer.innerHTML = projects.length > 0 ? `
-                <div class="mb-3">
-                    <label class="text-xs text-gray-600 dark:text-gray-400 block mb-2">Projects</label>
+                <div class="mt-2 mb-1">
+                    <label class="text-xs text-gray-600 dark:text-gray-400 block mb-0">Projects</label>
                     <fieldset class="space-y-1 max-h-32 overflow-y-auto pr-2">
                         <legend class="sr-only">Select projects to filter</legend>
                         ${projects.map(project => {
                             const actionCount = this.stateManager.getProjectActions(project.id).length;
                             return `
-                                <label class="flex items-center justify-between text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                <label class="flex items-center justify-between text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-0">
                                     <span class="flex items-center">
                                         <input type="checkbox" 
                                                 id="sidebar-project-filter-${project.id}"
@@ -1315,11 +1315,11 @@ class FilterManager {
         if (assigneesContainer && assignees.length > 0) {
             assigneesContainer.innerHTML = `
                 <div>
-                    <label class="text-xs text-gray-600 dark:text-gray-400 block mb-2">Assignees</label>
+                    <label class="text-xs text-gray-600 dark:text-gray-400 block mb-0">Assignees</label>
                     <fieldset class="space-y-1 max-h-32 overflow-y-auto pr-2">
                         <legend class="sr-only">Select assignees to filter</legend>
                         ${assignees.map(assignee => `
-                            <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                            <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-0">
                                 <input type="checkbox" 
                                         id="sidebar-assignee-filter-${assignee.replace(/\s+/g, '-')}"
                                         name="assignee-filter"
