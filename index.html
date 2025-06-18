@@ -114,29 +114,35 @@
                     </nav>
                 </div>
                 
-                <!-- Filter section container with proper overflow handling -->
+                <!-- Filter section container -->
                 <div id="sidebar-filter-section" class="transition-all duration-300 max-h-0 overflow-hidden">
                     <div class="border-t border-gray-200 dark:border-gray-700 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                        <div class="p-4 space-y-4">
-                            <!-- Search -->
+                        <div class="p-4 space-y-6">
+                            <!-- Search Section -->
                             <div>
-                                <label for="sidebar-search-input" class="sr-only">Search actions</label>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-search text-xs text-gray-500 dark:text-gray-400"></i>
+                                    <label for="sidebar-search-input" class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Search</label>
+                                </div>
                                 <input type="text" 
                                     id="sidebar-search-input"
                                     name="search"
                                     placeholder="Search actions..." 
                                     value=""
                                     oninput="app.filter.updateFilter('search', this.value)"
-                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             </div>
                             
-                            <!-- Sort -->
+                            <!-- Sort Section -->
                             <div>
-                                <label for="sidebar-sort-select" class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Sort by</label>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-sort text-xs text-gray-500 dark:text-gray-400"></i>
+                                    <label for="sidebar-sort-select" class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Sort By</label>
+                                </div>
                                 <select id="sidebar-sort-select"
                                         name="sort"
                                         onchange="app.filter.setSortOrder(this.value)" 
-                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                     <option value="originalPriority">Priority (High to Low)</option>
                                     <option value="lastModified">Last Modified</option>
                                     <option value="alphabetical">Alphabetical</option>
@@ -146,43 +152,126 @@
                                 </select>
                             </div>
                             
-                            <!-- Projects filter -->
-                            <div id="sidebar-projects-filter"></div>
+                            <!-- Priority Filters Section -->
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fas fa-exclamation-circle text-xs text-gray-500 dark:text-gray-400"></i>
+                                    <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Priority Filters</h3>
+                                </div>
+                                
+                                <!-- Priority Levels -->
+                                <div class="ml-4 space-y-1">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                        <input type="checkbox" 
+                                            id="priority-critical"
+                                            name="priority-level"
+                                            value="critical"
+                                            onchange="app.filter.togglePriorityLevel('critical')"
+                                            class="mr-2 text-red-600 focus:ring-red-500">
+                                        <span class="w-3 h-3 rounded-full bg-red-600 mr-2"></span>
+                                        <span class="text-gray-600 dark:text-gray-400">Critical</span>
+                                    </label>
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                        <input type="checkbox" 
+                                            id="priority-high"
+                                            name="priority-level"
+                                            value="high"
+                                            onchange="app.filter.togglePriorityLevel('high')"
+                                            class="mr-2 text-amber-500 focus:ring-amber-500">
+                                        <span class="w-3 h-3 rounded-full bg-amber-500 mr-2"></span>
+                                        <span class="text-gray-600 dark:text-gray-400">High</span>
+                                    </label>
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                        <input type="checkbox" 
+                                            id="priority-medium"
+                                            name="priority-level"
+                                            value="medium"
+                                            onchange="app.filter.togglePriorityLevel('medium')"
+                                            class="mr-2 text-gray-500 focus:ring-gray-500">
+                                        <span class="w-3 h-3 rounded-full bg-gray-500 mr-2"></span>
+                                        <span class="text-gray-600 dark:text-gray-400">Medium</span>
+                                    </label>
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                        <input type="checkbox" 
+                                            id="priority-low"
+                                            name="priority-level"
+                                            value="low"
+                                            onchange="app.filter.togglePriorityLevel('low')"
+                                            class="mr-2 text-emerald-500 focus:ring-emerald-500">
+                                        <span class="w-3 h-3 rounded-full bg-emerald-500 mr-2"></span>
+                                        <span class="text-gray-600 dark:text-gray-400">Low</span>
+                                    </label>
+                                </div>
+                                
+                                <!-- Urgency Filter -->
+                                <div class="mb-3">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -mx-2">
+                                        <input type="checkbox" 
+                                            id="sidebar-urgency-filter"
+                                            name="urgency-filter"
+                                            onchange="app.filter.toggleUrgencyFilter()"
+                                            class="mr-3 text-red-600 focus:ring-red-500">
+                                        <span class="flex items-center gap-2">
+                                            <i class="fas fa-fire text-red-500"></i>
+                                            <span class="text-gray-700 dark:text-gray-300">Urgent items only</span>
+                                        </span>
+                                    </label>
+                                </div>
+                                
+                                <!-- Star Rating Filter -->
+                                <div class="mb-3">
+                                    <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -mx-2">
+                                        <input type="checkbox" 
+                                            id="sidebar-rating-filter"
+                                            name="rating-filter"
+                                            onchange="app.clickStarFilter()"
+                                            class="mr-3 text-yellow-500 focus:ring-yellow-500">
+                                        <span class="flex items-center gap-2">
+                                            <i class="fas fa-star text-yellow-500"></i>
+                                            <span class="text-gray-700 dark:text-gray-300">Starred items only</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
                             
-                            <!-- Assignees filter -->
-                            <div id="sidebar-assignees-filter"></div>
-                            
-                            <!-- Progress filter -->
-                            <div>
-                                <label for="sidebar-progress-filter" class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Progress</label>
+                            <!-- Status & Progress Section -->
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fas fa-tasks text-xs text-gray-500 dark:text-gray-400"></i>
+                                    <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</h3>
+                                </div>
                                 <select id="sidebar-progress-filter"
                                         name="progress-filter"
                                         onchange="app.filter.updateFilter('progress', this.value)" 
-                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
-                                    <option value="all">All</option>
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="all">All Progress</option>
                                     <option value="not-started">Not Started</option>
                                     <option value="in-progress">In Progress</option>
                                     <option value="completed">Completed</option>
                                 </select>
                             </div>
                             
-                            <!-- Rating filter -->
-                            <div>
-                                <label class="flex items-center text-sm">
-                                    <input type="checkbox" 
-                                        id="sidebar-rating-filter"
-                                        name="rating-filter"
-                                        onchange="app.clickStarFilter()"
-                                        class="mr-2">
-                                    <span class="text-gray-600 dark:text-gray-400">Show only rated actions</span>
-                                </label>
+                            <!-- Organization Section -->
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fas fa-sitemap text-xs text-gray-500 dark:text-gray-400"></i>
+                                    <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Organization</h3>
+                                </div>
+                                
+                                <!-- Projects filter -->
+                                <div id="sidebar-projects-filter" class="mb-4"></div>
+                                
+                                <!-- Assignees filter -->
+                                <div id="sidebar-assignees-filter"></div>
                             </div>
                             
                             <!-- Clear filters -->
-                            <button onclick="app.filter.clearAllFilters()" 
-                                    class="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
-                                <i class="fas fa-times mr-2"></i>Clear Filters
-                            </button>
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                <button onclick="app.filter.clearAllFilters()" 
+                                        class="w-full px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Clear All Filters
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -469,7 +558,8 @@ class StateManager {
                 priorities: new Set(),
                 progress: 'all',
                 hasRating: false,
-                priorityLevels: new Set()
+                priorityLevels: new Set(),
+                urgency: 'all' // Add this line
             },
             replaceMode: false,
             darkMode: localStorage.getItem('darkMode') === 'true',
@@ -706,6 +796,17 @@ class StateManager {
         this.debouncedPersist();
     }
 
+    toggleUrgencyFilter() {
+        if (this.state.filters.urgency === 'high') {
+            // Reset to default
+            this.state.filters.urgency = 'all';
+        } else {
+            // Apply urgency filter
+            this.state.filters.urgency = 'high';
+        }
+        this.debouncedPersist();
+    }
+
     clearAllFilters() {
         this.state.filters = {
             search: '',
@@ -714,7 +815,8 @@ class StateManager {
             priorities: new Set(),
             progress: 'all',
             hasRating: false,
-            priorityLevels: new Set()
+            priorityLevels: new Set(),
+            urgency: 'all' // Add this line
         };
         this.state.sortOrder = 'originalPriority';
         this.debouncedPersist();
@@ -751,6 +853,7 @@ class StateManager {
         if (this.state.filters.progress !== 'all') count++;
         if (this.state.filters.hasRating) count++;
         if (this.state.filters.priorityLevels.size > 0) count += this.state.filters.priorityLevels.size;
+        if (this.state.filters.urgency !== 'all') count++; // Add this line
         return count;
     }
 
@@ -793,6 +896,12 @@ class StateManager {
         if (this.state.filters.priorityLevels.size > 0) {
             actions = actions.filter(action => 
                 this.state.filters.priorityLevels.has(action.getPriorityLevel())
+            );
+        }
+
+        if (this.state.filters.urgency === 'high') {
+            actions = actions.filter(action => 
+                (action.urgency || '').toUpperCase().trim() === 'H'
             );
         }
         
@@ -875,7 +984,8 @@ class StateManager {
                     priorities: Array.from(this.state.filters.priorities),
                     progress: this.state.filters.progress,
                     hasRating: this.state.filters.hasRating,
-                    priorityLevels: Array.from(this.state.filters.priorityLevels)
+                    priorityLevels: Array.from(this.state.filters.priorityLevels),
+                    urgency: this.state.filters.urgency // Add this line
                 }
             }
         };
@@ -955,6 +1065,9 @@ class StateManager {
                 }
                 if (data.state.filters.priorityLevels) {
                     this.state.filters.priorityLevels = new Set(data.state.filters.priorityLevels);
+                }
+                if (data.state.filters.urgency) {
+                    this.state.filters.urgency = data.state.filters.urgency;
                 }
             }
         } catch (error) {
@@ -1077,6 +1190,18 @@ class FilterManager {
         this.updateFilterUI();
     }
 
+    toggleUrgencyFilter() {
+        this.stateManager.toggleUrgencyFilter();
+        this.updateFilterUI();
+        this.renderManager.render();
+    }
+
+    togglePriorityLevel(level) {
+        this.stateManager.togglePriorityLevelFilter(level);
+        this.updateFilterUI();
+        this.renderManager.render();
+    }
+
     clearAllFilters() {
         this.stateManager.clearAllFilters();
         this.updateFilterUI();
@@ -1133,6 +1258,21 @@ class FilterManager {
         if (ratingCheckbox && ratingCheckbox.checked !== this.stateManager.state.filters.hasRating) {
             ratingCheckbox.checked = this.stateManager.state.filters.hasRating;
         }
+        
+        // Update urgency checkbox
+        const urgencyCheckbox = document.getElementById('sidebar-urgency-filter');
+        if (urgencyCheckbox && urgencyCheckbox.checked !== (this.stateManager.state.filters.urgency === 'high')) {
+            urgencyCheckbox.checked = this.stateManager.state.filters.urgency === 'high';
+        }
+        
+        // Update priority level checkboxes
+        const priorityLevels = ['critical', 'high', 'medium', 'low'];
+        priorityLevels.forEach(level => {
+            const checkbox = document.getElementById(`priority-${level}`);
+            if (checkbox) {
+                checkbox.checked = this.stateManager.state.filters.priorityLevels.has(level);
+            }
+        });
     }
 
     updateSidebarFilters() {
@@ -1142,46 +1282,56 @@ class FilterManager {
         // Update projects filter
         const projectsContainer = document.getElementById('sidebar-projects-filter');
         if (projectsContainer) {
-            projectsContainer.innerHTML = `
-                <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Projects</label>
-                <fieldset class="space-y-1">
-                    <legend class="sr-only">Select projects to filter</legend>
-                    ${projects.map(project => `
-                        <label class="flex items-center text-sm">
-                            <input type="checkbox" 
-                                    id="sidebar-project-filter-${project.id}"
-                                    name="project-filter"
-                                    value="${project.id}"
-                                    ${this.stateManager.state.filters.projectIds.has(project.id) ? 'checked' : ''}
-                                    onchange="app.filter.toggleProjectFilter('${project.id}')"
-                                    class="mr-2">
-                            <span class="text-gray-600 dark:text-gray-400">${project.name}</span>
-                        </label>
-                    `).join('')}
-                </fieldset>
-            `;
+            projectsContainer.innerHTML = projects.length > 0 ? `
+                <div class="mb-3">
+                    <label class="text-xs text-gray-600 dark:text-gray-400 block mb-2">Projects</label>
+                    <fieldset class="space-y-1 max-h-32 overflow-y-auto pr-2">
+                        <legend class="sr-only">Select projects to filter</legend>
+                        ${projects.map(project => {
+                            const actionCount = this.stateManager.getProjectActions(project.id).length;
+                            return `
+                                <label class="flex items-center justify-between text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                    <span class="flex items-center">
+                                        <input type="checkbox" 
+                                                id="sidebar-project-filter-${project.id}"
+                                                name="project-filter"
+                                                value="${project.id}"
+                                                ${this.stateManager.state.filters.projectIds.has(project.id) ? 'checked' : ''}
+                                                onchange="app.filter.toggleProjectFilter('${project.id}')"
+                                                class="mr-2 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-gray-700 dark:text-gray-300">${project.name}</span>
+                                    </span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">${actionCount}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </fieldset>
+                </div>
+            ` : '';
         }
         
         // Update assignees filter
         const assigneesContainer = document.getElementById('sidebar-assignees-filter');
-        if (assigneesContainer) {
+        if (assigneesContainer && assignees.length > 0) {
             assigneesContainer.innerHTML = `
-                <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Assignees</label>
-                <fieldset class="space-y-1">
-                    <legend class="sr-only">Select assignees to filter</legend>
-                    ${assignees.map(assignee => `
-                        <label class="flex items-center text-sm">
-                            <input type="checkbox" 
-                                    id="sidebar-assignee-filter-${assignee.replace(/\s+/g, '-')}"
-                                    name="assignee-filter"
-                                    value="${assignee}"
-                                    ${this.stateManager.state.filters.assignees.has(assignee) ? 'checked' : ''}
-                                    onchange="app.filter.toggleAssigneeFilter('${assignee}')"
-                                    class="mr-2">
-                            <span class="text-gray-600 dark:text-gray-400">${assignee}</span>
-                        </label>
-                    `).join('')}
-                </fieldset>
+                <div>
+                    <label class="text-xs text-gray-600 dark:text-gray-400 block mb-2">Assignees</label>
+                    <fieldset class="space-y-1 max-h-32 overflow-y-auto pr-2">
+                        <legend class="sr-only">Select assignees to filter</legend>
+                        ${assignees.map(assignee => `
+                            <label class="flex items-center text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-1">
+                                <input type="checkbox" 
+                                        id="sidebar-assignee-filter-${assignee.replace(/\s+/g, '-')}"
+                                        name="assignee-filter"
+                                        value="${assignee}"
+                                        ${this.stateManager.state.filters.assignees.has(assignee) ? 'checked' : ''}
+                                        onchange="app.filter.toggleAssigneeFilter('${assignee}')"
+                                        class="mr-2 text-teal-600 focus:ring-teal-500">
+                                <span class="text-gray-700 dark:text-gray-300">${assignee}</span>
+                            </label>
+                        `).join('')}
+                    </fieldset>
+                </div>
             `;
         }
     }
@@ -1313,7 +1463,8 @@ class OverviewRenderer {
                 <div class="mt-auto pt-4">
                     <div class="flex items-center justify-between mb-2">
                         ${isUrgent && !isCompleted ? `
-                            <span class="text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
+                            <span class="text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-1 cursor-pointer hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                                onclick="event.stopPropagation(); app.clickUrgentFilter()">
                                 <i class="fas fa-exclamation-circle"></i>
                                 Urgent!
                             </span>
@@ -3008,6 +3159,12 @@ class App {
 
     clickPriorityFilter(priorityLevel) {
         this.stateManager.togglePriorityLevelFilter(priorityLevel);
+        this.filter.updateFilterUI();
+        this.renderManager.render();
+    }
+
+    clickUrgentFilter() {
+        this.stateManager.toggleUrgencyFilter();
         this.filter.updateFilterUI();
         this.renderManager.render();
     }
