@@ -1193,7 +1193,7 @@ class OverviewRenderer {
 
     renderActionGrid(actions) {
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 ${actions.map(action => this.renderActionCard(action)).join('')}
                 ${actions.length === 0 ? `
                     <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
@@ -2891,18 +2891,27 @@ class RenderManager {
         const view = this.stateManager.state.currentView;
         const content = document.getElementById('main-content');
         
+        // Clear and set max-width wrapper with 2xl max width
+        content.innerHTML = `
+            <div class="max-w-screen-2xl mx-auto">
+                <div id="view-content"></div>
+            </div>
+        `;
+        
+        const viewContent = document.getElementById('view-content');
+        
         switch(view) {
             case 'overview':
-                this.overview.render(content);
+                this.overview.render(viewContent);
                 break;
             case 'projects':
-                this.project.render(content);
+                this.project.render(viewContent);
                 break;
             case 'focus':
-                this.focus.render(content);
+                this.focus.render(viewContent);
                 break;
             case 'import-export':
-                this.importExport.render(content);
+                this.importExport.render(viewContent);
                 break;
         }
     }
