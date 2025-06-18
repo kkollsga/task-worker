@@ -16,35 +16,114 @@
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <div class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-            <div class="p-6">
-                <h1 class="text-xl font-semibold mb-6">Task Worker</h1>
-                <nav class="space-y-1">
-                    <a href="#" onclick="app.navigation.setView('overview')" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="overview">
-                        <i class="fas fa-th-large mr-3 w-5"></i>
-                        Overview
-                    </a>
-                    <a href="#" onclick="app.navigation.setView('projects')" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="projects">
-                        <i class="fas fa-folder mr-3 w-5"></i>
-                        Project Management
-                    </a>
-                    <a href="#" id="focus-nav" onclick="app.navigation.setView('focus')" class="nav-item hidden flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="focus">
-                        <i class="fas fa-crosshairs mr-3 w-5"></i>
-                        Focus
-                    </a>
-                    <a href="#" onclick="app.navigation.setView('import-export')" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="import-export">
-                        <i class="fas fa-file-import mr-3 w-5"></i>
-                        Import/Export
-                    </a>
-                </nav>
+        <div class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+            <div class="flex-1 overflow-y-auto transition-all duration-300 flex flex-col" id="sidebar-content">
+                <div class="p-6 flex-1">
+                    <h1 class="text-xl font-semibold mb-6">Task Worker</h1>
+                    <nav class="space-y-1">
+                        <a href="#" onclick="app.navigation.setView('overview')" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="overview">
+                            <i class="fas fa-th-large mr-3 w-5"></i>
+                            Overview
+                        </a>
+                        <a href="#" onclick="app.navigation.setView('projects')" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="projects">
+                            <i class="fas fa-folder mr-3 w-5"></i>
+                            Project Management
+                        </a>
+                        <a href="#" id="focus-nav" onclick="app.navigation.setView('focus')" class="nav-item hidden flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="focus">
+                            <i class="fas fa-crosshairs mr-3 w-5"></i>
+                            Focus
+                        </a>
+                        <a href="#" onclick="app.navigation.setView('import-export')" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-view="import-export">
+                            <i class="fas fa-file-import mr-3 w-5"></i>
+                            Import/Export
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- Filter section - positioned at bottom of sidebar content -->
+                <div id="sidebar-filter-section" class="transition-all duration-300 max-h-0 overflow-hidden">
+                    <div class="p-4 space-y-4 border-t border-gray-200 dark:border-gray-700">
+                        <!-- Search -->
+                        <div>
+                            <label for="sidebar-search-input" class="sr-only">Search actions</label>
+                            <input type="text" 
+                                id="sidebar-search-input"
+                                name="search"
+                                placeholder="Search actions..." 
+                                value=""
+                                oninput="app.filter.updateFilter('search', this.value)"
+                                class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+                        </div>
+                        
+                        <!-- Sort -->
+                        <div>
+                            <label for="sidebar-sort-select" class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Sort by</label>
+                            <select id="sidebar-sort-select"
+                                    name="sort"
+                                    onchange="app.filter.setSortOrder(this.value)" 
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+                                <option value="originalPriority">Priority (High to Low)</option>
+                                <option value="lastModified">Last Modified</option>
+                                <option value="alphabetical">Alphabetical</option>
+                                <option value="createdAt">Entry Order</option>
+                                <option value="priority">Star Priority</option>
+                                <option value="progress">Progress Order</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Projects filter -->
+                        <div id="sidebar-projects-filter"></div>
+                        
+                        <!-- Assignees filter -->
+                        <div id="sidebar-assignees-filter"></div>
+                        
+                        <!-- Progress filter -->
+                        <div>
+                            <label for="sidebar-progress-filter" class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Progress</label>
+                            <select id="sidebar-progress-filter"
+                                    name="progress-filter"
+                                    onchange="app.filter.updateFilter('progress', this.value)" 
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+                                <option value="all">All</option>
+                                <option value="not-started">Not Started</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Rating filter -->
+                        <div>
+                            <label class="flex items-center text-sm">
+                                <input type="checkbox" 
+                                    id="sidebar-rating-filter"
+                                    name="rating-filter"
+                                    onchange="app.clickStarFilter()"
+                                    class="mr-2">
+                                <span class="text-gray-600 dark:text-gray-400">Show only rated actions</span>
+                            </label>
+                        </div>
+                        
+                        <!-- Clear filters -->
+                        <button onclick="app.filter.clearAllFilters()" 
+                                class="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
+                            <i class="fas fa-times mr-2"></i>Clear Filters
+                        </button>
+                    </div>
+                </div>
             </div>
             
-            <!-- Settings at bottom -->
-            <div class="absolute bottom-0 w-64 p-6 border-t border-gray-200 dark:border-gray-700">
+            <!-- Bottom section with theme toggle and filter button -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <button onclick="app.toggleDarkMode()" class="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                    <i class="fas fa-moon dark:hidden mr-2"></i>
-                    <i class="fas fa-sun hidden dark:inline mr-2"></i>
-                    <span>Toggle theme</span>
+                    <i class="fas fa-moon dark:hidden text-lg"></i>
+                    <i class="fas fa-sun hidden dark:inline text-lg"></i>
+                </button>
+                <button onclick="app.filter.toggleSidebarFilter()" 
+                        class="flex items-center px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        aria-expanded="false"
+                        aria-controls="sidebar-filter-section">
+                    <i class="fas fa-filter mr-2"></i>
+                    <span id="filter-count" class="font-medium">0</span>
                 </button>
             </div>
         </div>
@@ -311,8 +390,7 @@
                 activeCell: { row: null, col: null },
                 expandedCards: new Set(),
                 sortOrder: 'originalPriority',
-                controlsPanelExpanded: false,
-                filterSectionExpanded: false,
+                sidebarFilterExpanded: false,
                 previousFilterState: null
             };
             this.debouncedPersist = debounce(() => this.persist(), 500);
@@ -426,13 +504,8 @@
             this.debouncedPersist();
         }
 
-        toggleControlsPanel() {
-            this.state.controlsPanelExpanded = !this.state.controlsPanelExpanded;
-            this.debouncedPersist();
-        }
-
-        toggleFilterSection() {
-            this.state.filterSectionExpanded = !this.state.filterSectionExpanded;
+        toggleSidebarFilter() {
+            this.state.sidebarFilterExpanded = !this.state.sidebarFilterExpanded;
             this.debouncedPersist();
         }
 
@@ -500,6 +573,20 @@
             this.debouncedPersist();
         }
 
+        clearAllFilters() {
+            this.state.filters = {
+                search: '',
+                projectIds: new Set(),
+                assignees: new Set(),
+                priorities: new Set(),
+                progress: 'all',
+                hasRating: false,
+                priorityLevels: new Set()
+            };
+            this.state.sortOrder = 'originalPriority';
+            this.debouncedPersist();
+        }
+
         getUniqueAssignees() {
             const assignees = new Set();
             this.state.actions.forEach(action => {
@@ -521,6 +608,18 @@
                 }
             });
             return Array.from(assignees).sort();
+        }
+
+        getActiveFilterCount() {
+            let count = 0;
+            if (this.state.filters.search) count++;
+            if (this.state.filters.projectIds.size > 0) count += this.state.filters.projectIds.size;
+            if (this.state.filters.assignees.size > 0) count += this.state.filters.assignees.size;
+            if (this.state.filters.progress !== 'all') count++;
+            if (this.state.filters.hasRating) count++;
+            if (this.state.filters.priorityLevels.size > 0) count += this.state.filters.priorityLevels.size;
+            if (this.state.sortOrder !== 'originalPriority') count++;
+            return count;
         }
 
         getFilteredActions() {
@@ -635,8 +734,7 @@
                     focusActionId: this.state.focusActionId,
                     sortOrder: this.state.sortOrder,
                     currentView: this.state.currentView,
-                    controlsPanelExpanded: this.state.controlsPanelExpanded,
-                    filterSectionExpanded: this.state.filterSectionExpanded,
+                    sidebarFilterExpanded: this.state.sidebarFilterExpanded,
                     expandedCards: Array.from(this.state.expandedCards),
                     filters: {
                         search: this.state.filters.search,
@@ -692,12 +790,8 @@
                     this.state.currentView = data.state.currentView;
                 }
                 
-                if (data.state.controlsPanelExpanded !== undefined) {
-                    this.state.controlsPanelExpanded = data.state.controlsPanelExpanded;
-                }
-                
-                if (data.state.filterSectionExpanded !== undefined) {
-                    this.state.filterSectionExpanded = data.state.filterSectionExpanded;
+                if (data.state.sidebarFilterExpanded !== undefined) {
+                    this.state.sidebarFilterExpanded = data.state.sidebarFilterExpanded;
                 }
                 
                 if (data.state.expandedCards) {
@@ -813,169 +907,130 @@
         updateFilter(type, value) {
             this.stateManager.state.filters[type] = value;
             this.stateManager.debouncedPersist();
+            this.updateFilterUI();
             this.renderManager.render();
         }
 
         toggleProjectFilter(projectId) {
             this.stateManager.toggleProjectFilter(projectId);
+            this.updateFilterUI();
             this.renderManager.render();
         }
 
         toggleAssigneeFilter(assignee) {
             this.stateManager.toggleAssigneeFilter(assignee);
+            this.updateFilterUI();
             this.renderManager.render();
         }
 
         setSortOrder(order) {
             this.stateManager.setSortOrder(order);
+            this.updateFilterUI();
             this.renderManager.render();
         }
 
-        toggleControlsPanel() {
-            this.stateManager.toggleControlsPanel();
-            this.renderManager.render();
-        }
-
-        toggleFilterSection() {
-            this.stateManager.toggleFilterSection();
-            this.renderManager.render();
-        }
-
-        renderControlsPanel(actions, projects, assignees) {
-            const isExpanded = this.stateManager.state.controlsPanelExpanded;
-            const isFilterExpanded = this.stateManager.state.filterSectionExpanded;
+        toggleSidebarFilter() {
+            this.stateManager.toggleSidebarFilter();
+            const filterSection = document.getElementById('sidebar-filter-section');
             
-            return `
-                <div class="fixed bottom-5 right-5 z-50">
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 border border-gray-200 dark:border-gray-700 ${
-                        isExpanded ? 'w-80 opacity-100 transform scale-100' : 'w-0 h-0 opacity-0 transform scale-95'
-                    }">
-                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center gap-3">
-                                    <div class="text-2xl font-bold text-blue-600">${actions.length}</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">actions</div>
-                                </div>
-                                <button onclick="app.filter.toggleControlsPanel()" 
-                                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                        aria-label="Close controls panel">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            
-                            <label for="search-input" class="sr-only">Search actions</label>
-                            <input type="text" 
-                                   id="search-input"
-                                   name="search"
-                                   placeholder="Search actions..." 
-                                   value="${this.stateManager.state.filters.search}"
-                                   oninput="app.filter.updateFilter('search', this.value)"
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 mb-3">
-                            
-                            <label for="sort-select" class="sr-only">Sort order</label>
-                            <select id="sort-select"
-                                    name="sort"
-                                    onchange="app.filter.setSortOrder(this.value)" 
-                                    value="${this.stateManager.state.sortOrder}"
-                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 mb-3">
-                                <option value="originalPriority" ${this.stateManager.state.sortOrder === 'originalPriority' ? 'selected' : ''}>Priority (High to Low)</option>
-                                <option value="lastModified" ${this.stateManager.state.sortOrder === 'lastModified' ? 'selected' : ''}>Last Modified</option>
-                                <option value="alphabetical" ${this.stateManager.state.sortOrder === 'alphabetical' ? 'selected' : ''}>Alphabetical</option>
-                                <option value="createdAt" ${this.stateManager.state.sortOrder === 'createdAt' ? 'selected' : ''}>Entry Order</option>
-                                <option value="priority" ${this.stateManager.state.sortOrder === 'priority' ? 'selected' : ''}>Star Priority</option>
-                                <option value="progress" ${this.stateManager.state.sortOrder === 'progress' ? 'selected' : ''}>Progress Order</option>
-                            </select>
-                            
-                            <button onclick="app.filter.toggleFilterSection()" 
-                                    class="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                                    aria-expanded="${isFilterExpanded}"
-                                    aria-controls="filter-section">
-                                <i class="fas fa-filter mr-2"></i>Filters ${isFilterExpanded ? '▲' : '▼'}
-                            </button>
-                        </div>
-                        
-                        <div id="filter-section" class="transition-all duration-300 ${isFilterExpanded ? 'max-h-96' : 'max-h-0'} overflow-hidden">
-                            <div class="p-4 space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Projects</label>
-                                    <fieldset>
-                                        <legend class="sr-only">Select projects to filter</legend>
-                                        <div class="space-y-2 max-h-32 overflow-y-auto">
-                                            ${projects.map(project => `
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" 
-                                                           id="project-filter-${project.id}"
-                                                           name="project-filter"
-                                                           value="${project.id}"
-                                                           ${this.stateManager.state.filters.projectIds.has(project.id) ? 'checked' : ''}
-                                                           onchange="app.filter.toggleProjectFilter('${project.id}')"
-                                                           class="mr-2">
-                                                    <span class="text-sm">${project.name}</span>
-                                                </label>
-                                            `).join('')}
-                                        </div>
-                                    </fieldset>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Assignees</label>
-                                    <fieldset>
-                                        <legend class="sr-only">Select assignees to filter</legend>
-                                        <div class="space-y-2 max-h-32 overflow-y-auto">
-                                            ${assignees.map(assignee => `
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" 
-                                                           id="assignee-filter-${assignee.replace(/\s+/g, '-')}"
-                                                           name="assignee-filter"
-                                                           value="${assignee}"
-                                                           ${this.stateManager.state.filters.assignees.has(assignee) ? 'checked' : ''}
-                                                           onchange="app.filter.toggleAssigneeFilter('${assignee}')"
-                                                           class="mr-2">
-                                                    <span class="text-sm">${assignee}</span>
-                                                </label>
-                                            `).join('')}
-                                        </div>
-                                    </fieldset>
-                                </div>
-                                
-                                <div>
-                                    <label for="progress-filter" class="block text-sm font-medium mb-2">Progress</label>
-                                    <select id="progress-filter"
-                                            name="progress-filter"
-                                            onchange="app.filter.updateFilter('progress', this.value)" 
-                                            value="${this.stateManager.state.filters.progress}"
-                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
-                                        <option value="all" ${this.stateManager.state.filters.progress === 'all' ? 'selected' : ''}>All</option>
-                                        <option value="not-started" ${this.stateManager.state.filters.progress === 'not-started' ? 'selected' : ''}>Not Started</option>
-                                        <option value="in-progress" ${this.stateManager.state.filters.progress === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                                        <option value="completed" ${this.stateManager.state.filters.progress === 'completed' ? 'selected' : ''}>Completed</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" 
-                                               id="rating-filter"
-                                               name="rating-filter"
-                                               ${this.stateManager.state.filters.hasRating ? 'checked' : ''}
-                                               onchange="app.clickStarFilter()"
-                                               class="mr-2">
-                                        <span class="text-sm">Show only rated actions</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button onclick="app.filter.toggleControlsPanel()" 
-                            class="w-14 h-14 bg-gray-600 dark:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border border-gray-500 dark:border-gray-600 ${
-                                isExpanded ? 'hidden' : 'flex'
-                            } items-center justify-center"
-                            aria-label="Open controls panel">
-                        <i class="fas fa-sliders-h text-xl"></i>
-                    </button>
-                </div>
-            `;
+            if (this.stateManager.state.sidebarFilterExpanded) {
+                filterSection.style.maxHeight = '500px'; // Adjust as needed
+                this.updateSidebarFilters();
+            } else {
+                filterSection.style.maxHeight = '0';
+            }
+            
+            this.updateFilterUI();
+        }
+
+        clearAllFilters() {
+            this.stateManager.clearAllFilters();
+            this.updateFilterUI();
+            this.updateSidebarFilters();
+            this.renderManager.render();
+        }
+
+        updateFilterUI() {
+            // Update filter count
+            const filterCount = document.getElementById('filter-count');
+            if (filterCount) {
+                filterCount.textContent = this.stateManager.getActiveFilterCount();
+            }
+            
+            // Update search input
+            const searchInput = document.getElementById('sidebar-search-input');
+            if (searchInput && searchInput.value !== this.stateManager.state.filters.search) {
+                searchInput.value = this.stateManager.state.filters.search;
+            }
+            
+            // Update sort select
+            const sortSelect = document.getElementById('sidebar-sort-select');
+            if (sortSelect && sortSelect.value !== this.stateManager.state.sortOrder) {
+                sortSelect.value = this.stateManager.state.sortOrder;
+            }
+            
+            // Update progress select
+            const progressSelect = document.getElementById('sidebar-progress-filter');
+            if (progressSelect && progressSelect.value !== this.stateManager.state.filters.progress) {
+                progressSelect.value = this.stateManager.state.filters.progress;
+            }
+            
+            // Update rating checkbox
+            const ratingCheckbox = document.getElementById('sidebar-rating-filter');
+            if (ratingCheckbox && ratingCheckbox.checked !== this.stateManager.state.filters.hasRating) {
+                ratingCheckbox.checked = this.stateManager.state.filters.hasRating;
+            }
+        }
+
+        updateSidebarFilters() {
+            const projects = Array.from(this.stateManager.state.projects.values());
+            const assignees = this.stateManager.getUniqueAssignees();
+            
+            // Update projects filter
+            const projectsContainer = document.getElementById('sidebar-projects-filter');
+            if (projectsContainer) {
+                projectsContainer.innerHTML = `
+                    <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Projects</label>
+                    <fieldset class="space-y-1">
+                        <legend class="sr-only">Select projects to filter</legend>
+                        ${projects.map(project => `
+                            <label class="flex items-center text-sm">
+                                <input type="checkbox" 
+                                       id="sidebar-project-filter-${project.id}"
+                                       name="project-filter"
+                                       value="${project.id}"
+                                       ${this.stateManager.state.filters.projectIds.has(project.id) ? 'checked' : ''}
+                                       onchange="app.filter.toggleProjectFilter('${project.id}')"
+                                       class="mr-2">
+                                <span class="text-gray-600 dark:text-gray-400">${project.name}</span>
+                            </label>
+                        `).join('')}
+                    </fieldset>
+                `;
+            }
+            
+            // Update assignees filter
+            const assigneesContainer = document.getElementById('sidebar-assignees-filter');
+            if (assigneesContainer) {
+                assigneesContainer.innerHTML = `
+                    <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Assignees</label>
+                    <fieldset class="space-y-1">
+                        <legend class="sr-only">Select assignees to filter</legend>
+                        ${assignees.map(assignee => `
+                            <label class="flex items-center text-sm">
+                                <input type="checkbox" 
+                                       id="sidebar-assignee-filter-${assignee.replace(/\s+/g, '-')}"
+                                       name="assignee-filter"
+                                       value="${assignee}"
+                                       ${this.stateManager.state.filters.assignees.has(assignee) ? 'checked' : ''}
+                                       onchange="app.filter.toggleAssigneeFilter('${assignee}')"
+                                       class="mr-2">
+                                <span class="text-gray-600 dark:text-gray-400">${assignee}</span>
+                            </label>
+                        `).join('')}
+                    </fieldset>
+                `;
+            }
         }
     }
 
@@ -989,7 +1044,6 @@
         render(container) {
             const actions = this.stateManager.getFilteredActions();
             const projects = Array.from(this.stateManager.state.projects.values());
-            const assignees = this.stateManager.getUniqueAssignees();
             
             container.innerHTML = `
                 <div class="mb-8">
@@ -997,7 +1051,7 @@
                     <p class="text-gray-600 dark:text-gray-400">Track and manage all your actions across projects</p>
                 </div>
                 
-                ${projects.length === 0 ? this.renderEmptyState() : this.renderActionGrid(actions, projects, assignees)}
+                ${projects.length === 0 ? this.renderEmptyState() : this.renderActionGrid(actions)}
             `;
         }
 
@@ -1014,9 +1068,9 @@
             `;
         }
 
-        renderActionGrid(actions, projects, assignees) {
+        renderActionGrid(actions) {
             return `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     ${actions.map(action => this.renderActionCard(action)).join('')}
                     ${actions.length === 0 ? `
                         <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
@@ -1026,8 +1080,6 @@
                         </div>
                     ` : ''}
                 </div>
-                
-                ${this.filterManager.renderControlsPanel(actions, projects, assignees)}
             `;
         }
 
@@ -2754,6 +2806,7 @@
         init() {
             this.stateManager.init();
             this.navigation.updateNavHighlight(this.stateManager.state.currentView);
+            this.filter.updateFilterUI();
             this.renderManager.render();
         }
 
@@ -2776,17 +2829,20 @@
             const action = this.stateManager.state.actions.get(actionId);
             if (action) {
                 this.stateManager.toggleProgressFilter(action);
+                this.filter.updateFilterUI();
                 this.renderManager.render();
             }
         }
 
         clickStarFilter() {
             this.stateManager.toggleRatingFilter();
+            this.filter.updateFilterUI();
             this.renderManager.render();
         }
 
         clickPriorityFilter(priorityLevel) {
             this.stateManager.togglePriorityLevelFilter(priorityLevel);
+            this.filter.updateFilterUI();
             this.renderManager.render();
         }
     }
