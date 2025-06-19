@@ -508,8 +508,11 @@ class Action {
     }
 
     getCardTitle() {
-        const title = this.getDisplayTitle();
-        return title.length > 50 ? title.substring(0, 50) + '...' : title;
+        let title = '';
+        if (this.discipline) title += this.discipline;
+        if (this.discipline && this.category) title += ' - ';
+        if (this.category) title += this.category;
+        return title || 'Untitled Action';
     }
 
     getCardDescription() {
