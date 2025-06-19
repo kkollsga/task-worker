@@ -1818,12 +1818,35 @@ class ProjectRenderer {
                     ${data.length > 3 ? `<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">... and ${data.length - 3} more rows</p>` : ''}
                 </div>
                 
-                <button onclick="app.project.confirmImport('${project.id}')" 
-                        class="mt-4 w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-                    <i class="fas fa-check mr-2"></i>Confirm Import
-                </button>
+                <div class="flex gap-2 mt-4">
+                    <button onclick="app.project.confirmImport('${project.id}')" 
+                            class="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                        <i class="fas fa-check mr-2"></i>Confirm Import
+                    </button>
+                    <button onclick="app.project.cancelImport('${project.id}')" 
+                            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                </div>
             </div>
         `;
+    }
+
+    cancelImport(projectId) {
+        const project = this.stateManager.state.projects.get(projectId);
+        if (!project) return;
+        
+        // Clear the temporary data
+        project.tempExcelData = [];
+        project.excelHeaders = [];
+        this.visibleDropdowns.clear();
+        
+        // Clear the textarea
+        const textarea = document.getElementById('excel-paste');
+        if (textarea) textarea.value = '';
+        
+        this.stateManager.updateProject(projectId, project);
+        app.renderManager.render();
     }
 
     getColumnIconForType(columnType) {
@@ -1941,7 +1964,7 @@ class ProjectRenderer {
         const project = this.stateManager.state.projects.get(projectId);
         if (!project) return;
         
-        const selects = document.querySelectorAll('select[id^="col-map-"]');
+        // First, establish the mappings based on automatic matching
         const mappings = {
             findingNumber: null,
             discipline: null,
@@ -1954,9 +1977,58 @@ class ProjectRenderer {
             assignee: null
         };
         
+        // Helper function to match column names (same as in renderExcelPreview)
+        const matchColumn = (header) => {
+            const normalized = header.toLowerCase().trim();
+            
+            const mappingRules = {
+                findingNumber: ['finding #', 'finding number', 'finding no', 'finding no.', '#'],
+                discipline: ['discipline', 'disciplines'],
+                category: ['category', 'categories', 'cat'],
+                observationFinding: ['observation/finding', 'observation', 'finding', 'observations', 'findings', 'observation finding', 'description'],
+                impact: ['impact', 'impacts', 'consequence', 'consequences'],
+                recommendation: ['recommendation', 'recommendations', 'action', 'actions', 'corrective action'],
+                importance: ['importance', 'important', 'imp', 'i'],
+                urgency: ['urgency', 'urgent', 'urg', 'u'],
+                assignee: ['assignee', 'assigned to', 'assigned', 'responsible', 'owner', 'action party']
+            };
+            
+            // Check exact matches first
+            for (const [columnType, variations] of Object.entries(mappingRules)) {
+                if (variations.some(variation => normalized === variation)) {
+                    return columnType;
+                }
+            }
+            
+            // Then check partial matches, but exclude findingNumber
+            for (const [columnType, variations] of Object.entries(mappingRules)) {
+                if (columnType !== 'findingNumber' && variations.some(variation => normalized.includes(variation))) {
+                    return columnType;
+                }
+            }
+            
+            return null;
+        };
+        
+        // First apply automatic mappings
+        project.excelHeaders.forEach((header, index) => {
+            const matchedColumn = matchColumn(header);
+            if (matchedColumn) {
+                mappings[matchedColumn] = index;
+            }
+        });
+        
+        // Then override with any manual selections from visible dropdowns
+        const selects = document.querySelectorAll('select[id^="col-map-"]');
         selects.forEach(select => {
             const colIndex = parseInt(select.id.split('-')[2]);
             if (select.value) {
+                // Clear any existing mapping for this type
+                Object.keys(mappings).forEach(key => {
+                    if (mappings[key] === colIndex) {
+                        mappings[key] = null;
+                    }
+                });
                 mappings[select.value] = colIndex;
             }
         });
