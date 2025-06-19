@@ -508,6 +508,7 @@ class Project {
         this.id = data.id || generateId();
         this.name = data.name || 'New Project';
         this.createdAt = data.createdAt || new Date().toISOString();
+        this.referenceUrl = data.referenceUrl || ''; // Add this line
         this.columnMapping = data.columnMapping || {
             findingNumber: null,
             discipline: null,
@@ -529,6 +530,7 @@ class Project {
             id: this.id,
             name: this.name,
             createdAt: this.createdAt,
+            referenceUrl: this.referenceUrl, // Add this line
             columnMapping: this.columnMapping,
             excelHeaders: this.excelHeaders,
             tempExcelData: this.tempExcelData,
@@ -1348,10 +1350,37 @@ class OverviewRenderer {
         const actions = this.stateManager.getFilteredActions();
         const projects = Array.from(this.stateManager.state.projects.values());
         
+        // Check if exactly one project filter is active
+        let activeProjectUrl = null;
+        if (this.stateManager.state.filters.projectIds.size === 1) {
+            const projectId = Array.from(this.stateManager.state.filters.projectIds)[0];
+            const project = this.stateManager.state.projects.get(projectId);
+            if (project && project.referenceUrl) {
+                activeProjectUrl = project.referenceUrl;
+            }
+        }
+        
         container.innerHTML = `
             <div class="mb-8">
                 <h2 class="text-2xl font-bold mb-2">Overview</h2>
-                <p class="text-gray-600 dark:text-gray-400">Track and manage all your actions across projects</p>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Track and manage all your actions across projects
+                    ${this.stateManager.state.filters.projectIds.size === 1 ? `
+                        <span class="ml-2">
+                            <i class="fas fa-link text-gray-500 dark:text-gray-400"></i>
+                            ${activeProjectUrl ? `
+                                <a href="${activeProjectUrl}" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                                    Source file
+                                </a>
+                            ` : `
+                                <span class="ml-1 text-gray-400 dark:text-gray-600">Source file</span>
+                            `}
+                        </span>
+                    ` : ''}
+                </p>
             </div>
             
             ${projects.length === 0 ? this.renderEmptyState() : this.renderActionGrid(actions)}
@@ -1493,6 +1522,8 @@ class ProjectRenderer {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.editingProjectId = null;
+        this.editingUrlProjectId = null;
+        this.visibleDropdowns = new Set(); // Add this line
     }
 
     render(container) {
@@ -1582,6 +1613,47 @@ class ProjectRenderer {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold mb-4">Import Excel Data - ${project.name}</h3>
                 
+                <!-- Reference URL Section -->
+                <div class="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-2">
+                        ${this.editingUrlProjectId === project.id ? `
+                            <div class="flex items-center gap-2 flex-1">
+                                <i class="fas fa-link text-gray-500 dark:text-gray-400"></i>
+                                <input type="text" 
+                                    id="edit-url-${project.id}" 
+                                    value="${project.referenceUrl || ''}" 
+                                    placeholder="Enter source URL..."
+                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onkeypress="if(event.key === 'Enter') app.project.saveProjectUrl('${project.id}')">
+                                <button onclick="app.project.saveProjectUrl('${project.id}')" 
+                                        class="p-2 text-green-600 hover:text-green-700 transition-colors">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button onclick="app.project.cancelUrlEdit()" 
+                                        class="p-2 text-red-600 hover:text-red-700 transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <i class="fas fa-link text-gray-500 dark:text-gray-400"></i>
+                            ${project.referenceUrl ? `
+                                <a href="${project.referenceUrl}" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                                    Source file
+                                </a>
+                            ` : `
+                                <span class="text-gray-400 dark:text-gray-600">Source file</span>
+                            `}
+                            <button onclick="app.project.editProjectUrl('${project.id}')" 
+                                    class="ml-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                                <i class="fas fa-pen text-sm"></i>
+                            </button>
+                        `}
+                    </div>
+                </div>
+                
                 <div class="mb-4">
                     <label class="flex items-center mb-4">
                         <input type="checkbox" 
@@ -1612,6 +1684,42 @@ class ProjectRenderer {
         `;
     }
 
+    toggleDropdown(projectId, columnIndex) {
+        const key = `${projectId}-${columnIndex}`;
+        if (this.visibleDropdowns.has(key)) {
+            this.visibleDropdowns.delete(key);
+        } else {
+            this.visibleDropdowns.add(key);
+        }
+        app.renderManager.render();
+    }
+
+    editProjectUrl(projectId) {
+        this.editingUrlProjectId = projectId;
+        app.renderManager.render();
+        setTimeout(() => {
+            const input = document.getElementById(`edit-url-${projectId}`);
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, 0);
+    }
+
+    saveProjectUrl(projectId) {
+        const input = document.getElementById(`edit-url-${projectId}`);
+        if (input) {
+            this.stateManager.updateProject(projectId, { referenceUrl: input.value.trim() });
+        }
+        this.editingUrlProjectId = null;
+        app.renderManager.render();
+    }
+
+    cancelUrlEdit() {
+        this.editingUrlProjectId = null;
+        app.renderManager.render();
+    }
+
     renderExcelPreview(project) {
         const headers = project.excelHeaders;
         const data = project.tempExcelData;
@@ -1622,20 +1730,27 @@ class ProjectRenderer {
             
             // Define mapping rules for each column type
             const mappingRules = {
-                findingNumber: ['finding #', 'finding number', 'finding no', 'finding no.', 'finding', '#'],
+                findingNumber: ['finding #', 'finding number', 'finding no', 'finding no.', '#'],
                 discipline: ['discipline', 'disciplines'],
                 category: ['category', 'categories', 'cat'],
                 observationFinding: ['observation/finding', 'observation', 'finding', 'observations', 'findings', 'observation finding', 'description'],
                 impact: ['impact', 'impacts', 'consequence', 'consequences'],
                 recommendation: ['recommendation', 'recommendations', 'action', 'actions', 'corrective action'],
-                importance: ['importance', 'important', 'imp'],
-                urgency: ['urgency', 'urgent', 'urg'],
+                importance: ['importance', 'important', 'imp', 'i'],
+                urgency: ['urgency', 'urgent', 'urg', 'u'],
                 assignee: ['assignee', 'assigned to', 'assigned', 'responsible', 'owner', 'action party']
             };
             
-            // Check each mapping rule
+            // Check exact matches first to avoid "Finding #" matching "finding" in observationFinding
             for (const [columnType, variations] of Object.entries(mappingRules)) {
-                if (variations.some(variation => normalized.includes(variation))) {
+                if (variations.some(variation => normalized === variation)) {
+                    return columnType;
+                }
+            }
+            
+            // Then check partial matches, but exclude findingNumber from partial matching
+            for (const [columnType, variations] of Object.entries(mappingRules)) {
+                if (columnType !== 'findingNumber' && variations.some(variation => normalized.includes(variation))) {
                     return columnType;
                 }
             }
@@ -1647,29 +1762,38 @@ class ProjectRenderer {
             <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
                 <h4 class="font-medium mb-3">Preview & Column Mapping</h4>
                 
-                <div class="mb-4 overflow-x-auto">
+                <div class="mb-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                     <table class="w-full text-sm border-collapse">
                         <thead>
                             <tr>
                                 ${headers.map((header, index) => {
                                     const matchedColumn = matchColumn(header);
+                                    const dropdownKey = `preview-${project.id}-${index}`;
+                                    const showDropdown = !matchedColumn || this.visibleDropdowns.has(dropdownKey);
+                                    
                                     return `
                                         <th class="border border-gray-300 dark:border-gray-600 p-2 bg-gray-50 dark:bg-gray-900">
-                                            <div>${header}</div>
-                                            <select id="col-map-${index}" 
-                                                    onchange="app.project.updatePreviewColumnMapping(${index}, this.value)"
-                                                    class="mt-1 w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
-                                                <option value="">Unmapped</option>
-                                                <option value="findingNumber" ${matchedColumn === 'findingNumber' ? 'selected' : ''}>Finding #</option>
-                                                <option value="discipline" ${matchedColumn === 'discipline' ? 'selected' : ''}>Discipline</option>
-                                                <option value="category" ${matchedColumn === 'category' ? 'selected' : ''}>Category</option>
-                                                <option value="observationFinding" ${matchedColumn === 'observationFinding' ? 'selected' : ''}>Observation/Finding*</option>
-                                                <option value="impact" ${matchedColumn === 'impact' ? 'selected' : ''}>Impact</option>
-                                                <option value="recommendation" ${matchedColumn === 'recommendation' ? 'selected' : ''}>Recommendation</option>
-                                                <option value="importance" ${matchedColumn === 'importance' ? 'selected' : ''}>Importance</option>
-                                                <option value="urgency" ${matchedColumn === 'urgency' ? 'selected' : ''}>Urgency</option>
-                                                <option value="assignee" ${matchedColumn === 'assignee' ? 'selected' : ''}>Assignee</option>
-                                            </select>
+                                            <div class="flex items-center gap-2 ${matchedColumn ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1' : ''}"
+                                                ${matchedColumn ? `onclick="app.project.toggleDropdown('preview-${project.id}', ${index})"` : ''}>
+                                                <span>${header}</span>
+                                                ${this.getColumnIconForType(matchedColumn)}
+                                            </div>
+                                            ${showDropdown ? `
+                                                <select id="col-map-${index}" 
+                                                        onchange="app.project.updatePreviewColumnMapping(${index}, this.value)"
+                                                        class="mt-1 w-full min-w-[120px] text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
+                                                    <option value="">Unmapped</option>
+                                                    <option value="findingNumber" ${matchedColumn === 'findingNumber' ? 'selected' : ''}>Finding #</option>
+                                                    <option value="discipline" ${matchedColumn === 'discipline' ? 'selected' : ''}>Discipline</option>
+                                                    <option value="category" ${matchedColumn === 'category' ? 'selected' : ''}>Category</option>
+                                                    <option value="observationFinding" ${matchedColumn === 'observationFinding' ? 'selected' : ''}>Observation/Finding*</option>
+                                                    <option value="impact" ${matchedColumn === 'impact' ? 'selected' : ''}>Impact</option>
+                                                    <option value="recommendation" ${matchedColumn === 'recommendation' ? 'selected' : ''}>Recommendation</option>
+                                                    <option value="importance" ${matchedColumn === 'importance' ? 'selected' : ''}>Importance</option>
+                                                    <option value="urgency" ${matchedColumn === 'urgency' ? 'selected' : ''}>Urgency</option>
+                                                    <option value="assignee" ${matchedColumn === 'assignee' ? 'selected' : ''}>Assignee</option>
+                                                </select>
+                                            ` : ''}
                                         </th>
                                     `;
                                 }).join('')}
@@ -1692,6 +1816,24 @@ class ProjectRenderer {
                 </button>
             </div>
         `;
+    }
+
+    getColumnIconForType(columnType) {
+        if (!columnType) return '';
+        
+        const icons = {
+            findingNumber: '<i class="fas fa-hashtag text-gray-600 dark:text-gray-400"></i>',
+            discipline: '<i class="fas fa-graduation-cap text-purple-600 dark:text-purple-400"></i>',
+            category: '<i class="fas fa-tag text-indigo-600 dark:text-indigo-400"></i>',
+            observationFinding: '<i class="fas fa-eye text-blue-600 dark:text-blue-400"></i>',
+            impact: '<i class="fas fa-exclamation-triangle text-orange-600 dark:text-orange-400"></i>',
+            recommendation: '<i class="fas fa-lightbulb text-green-600 dark:text-green-400"></i>',
+            importance: '<i class="fas fa-exclamation-circle text-red-600 dark:text-red-400"></i>',
+            urgency: '<i class="fas fa-clock text-yellow-600 dark:text-yellow-400"></i>',
+            assignee: '<i class="fas fa-user text-teal-600 dark:text-teal-400"></i>'
+        };
+        
+        return icons[columnType] || '';
     }
 
     // Project management methods
@@ -1863,7 +2005,18 @@ class ProjectRenderer {
 class TableEditor {
     constructor(stateManager) {
         this.stateManager = stateManager;
+        this.visibleDropdowns = new Set(); // Add this line
         this.setupKeyboardShortcuts();
+    }
+
+    toggleDropdown(projectId, columnIndex) {
+        const key = `${projectId}-${columnIndex}`;
+        if (this.visibleDropdowns.has(key)) {
+            this.visibleDropdowns.delete(key);
+        } else {
+            this.visibleDropdowns.add(key);
+        }
+        app.renderManager.render();
     }
 
     setupKeyboardShortcuts() {
@@ -1906,6 +2059,47 @@ class TableEditor {
         
         return `
             <div class="space-y-6">
+                <!-- Reference URL Section -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-2">
+                        ${app.project.editingUrlProjectId === project.id ? `
+                            <div class="flex items-center gap-2 flex-1">
+                                <i class="fas fa-link text-gray-500 dark:text-gray-400"></i>
+                                <input type="text" 
+                                    id="edit-url-${project.id}" 
+                                    value="${project.referenceUrl || ''}" 
+                                    placeholder="Enter source URL..."
+                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onkeypress="if(event.key === 'Enter') app.project.saveProjectUrl('${project.id}')">
+                                <button onclick="app.project.saveProjectUrl('${project.id}')" 
+                                        class="p-2 text-green-600 hover:text-green-700 transition-colors">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button onclick="app.project.cancelUrlEdit()" 
+                                        class="p-2 text-red-600 hover:text-red-700 transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <i class="fas fa-link text-gray-500 dark:text-gray-400"></i>
+                            ${project.referenceUrl ? `
+                                <a href="${project.referenceUrl}" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                                    Source file
+                                </a>
+                            ` : `
+                                <span class="text-gray-400 dark:text-gray-600">Source file</span>
+                            `}
+                            <button onclick="app.project.editProjectUrl('${project.id}')" 
+                                    class="ml-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                                <i class="fas fa-pen text-sm"></i>
+                            </button>
+                        `}
+                    </div>
+                </div>
+                
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
                     <div class="flex justify-between items-center p-6 pb-4">
                         <h3 class="text-lg font-semibold">Imported Excel Data</h3>
@@ -1929,38 +2123,49 @@ class TableEditor {
                         </div>
                     </div>
                     
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                         <table class="w-full text-sm border-collapse" id="excel-table">
                             <thead>
                                 <tr class="border-t border-b border-gray-200 dark:border-gray-700">
-                                    ${project.excelHeaders.map((header, index) => `
-                                        <th class="text-left py-3 px-4 font-semibold border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 relative">
-                                            <div>${header}</div>
-                                            <select id="column-mapping-${index}" 
-                                                    name="column-mapping-${index}"
-                                                    onchange="app.tableEditor.updateColumnMapping(${index}, this.value)" 
-                                                    class="mt-1 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                                                    ${isEditMode ? 'disabled' : ''}>
-                                                <option value="">Unmapped</option>
-                                                <option value="findingNumber" ${project.columnMapping.findingNumber === index ? 'selected' : ''}>Finding #</option>
-                                                <option value="discipline" ${project.columnMapping.discipline === index ? 'selected' : ''}>Discipline</option>
-                                                <option value="category" ${project.columnMapping.category === index ? 'selected' : ''}>Category</option>
-                                                <option value="observationFinding" ${project.columnMapping.observationFinding === index ? 'selected' : ''}>Observation/Finding*</option>
-                                                <option value="impact" ${project.columnMapping.impact === index ? 'selected' : ''}>Impact</option>
-                                                <option value="recommendation" ${project.columnMapping.recommendation === index ? 'selected' : ''}>Recommendation</option>
-                                                <option value="importance" ${project.columnMapping.importance === index ? 'selected' : ''}>Importance</option>
-                                                <option value="urgency" ${project.columnMapping.urgency === index ? 'selected' : ''}>Urgency</option>
-                                                <option value="assignee" ${project.columnMapping.assignee === index ? 'selected' : ''}>Assignee</option>
-                                            </select>
-                                            ${this.getColumnIcon(project, index)}
-                                            ${isEditMode ? `
-                                                <button onclick="app.tableEditor.deleteColumn(${index})" 
-                                                        class="absolute top-2 right-2 text-red-600 hover:text-red-700 opacity-0 hover:opacity-100 transition-opacity">
-                                                    <i class="fas fa-times text-xs"></i>
-                                                </button>
-                                            ` : ''}
-                                        </th>
-                                    `).join('')}
+                                    ${project.excelHeaders.map((header, index) => {
+                                        const mappedColumn = Object.entries(project.columnMapping).find(([key, val]) => val === index)?.[0];
+                                        const dropdownKey = `${project.id}-${index}`;
+                                        const showDropdown = !mappedColumn || this.visibleDropdowns.has(dropdownKey);
+                                        
+                                        return `
+                                            <th class="text-left py-3 px-4 font-semibold border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 relative">
+                                                <div class="flex items-center gap-2 ${mappedColumn && !isEditMode ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1' : ''}"
+                                                    ${mappedColumn && !isEditMode ? `onclick="app.tableEditor.toggleDropdown('${project.id}', ${index})"` : ''}>
+                                                    <span>${header}</span>
+                                                    ${this.getColumnIcon(project, index)}
+                                                </div>
+                                                ${showDropdown || isEditMode ? `
+                                                    <select id="column-mapping-${index}" 
+                                                            name="column-mapping-${index}"
+                                                            onchange="app.tableEditor.updateColumnMapping(${index}, this.value)" 
+                                                            class="mt-1 text-xs px-2 py-1 min-w-[120px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                                                            ${isEditMode ? 'disabled' : ''}>
+                                                        <option value="">Unmapped</option>
+                                                        <option value="findingNumber" ${project.columnMapping.findingNumber === index ? 'selected' : ''}>Finding #</option>
+                                                        <option value="discipline" ${project.columnMapping.discipline === index ? 'selected' : ''}>Discipline</option>
+                                                        <option value="category" ${project.columnMapping.category === index ? 'selected' : ''}>Category</option>
+                                                        <option value="observationFinding" ${project.columnMapping.observationFinding === index ? 'selected' : ''}>Observation/Finding*</option>
+                                                        <option value="impact" ${project.columnMapping.impact === index ? 'selected' : ''}>Impact</option>
+                                                        <option value="recommendation" ${project.columnMapping.recommendation === index ? 'selected' : ''}>Recommendation</option>
+                                                        <option value="importance" ${project.columnMapping.importance === index ? 'selected' : ''}>Importance</option>
+                                                        <option value="urgency" ${project.columnMapping.urgency === index ? 'selected' : ''}>Urgency</option>
+                                                        <option value="assignee" ${project.columnMapping.assignee === index ? 'selected' : ''}>Assignee</option>
+                                                    </select>
+                                                ` : ''}
+                                                ${isEditMode ? `
+                                                    <button onclick="app.tableEditor.deleteColumn(${index})" 
+                                                            class="absolute top-2 right-2 text-red-600 hover:text-red-700 opacity-0 hover:opacity-100 transition-opacity">
+                                                        <i class="fas fa-times text-xs"></i>
+                                                    </button>
+                                                ` : ''}
+                                            </th>
+                                        `;
+                                    }).join('')}
                                     <th class="text-left py-3 px-4 font-semibold bg-gray-50 dark:bg-gray-900">
                                         Comment
                                         <div class="text-xs text-gray-500 dark:text-gray-400 font-normal mt-1">System</div>
@@ -2072,15 +2277,15 @@ class TableEditor {
         if (!mapping) return '';
         
         const icons = {
-            findingNumber: '<i class="fas fa-hashtag text-gray-600 dark:text-gray-400 ml-2"></i>',
-            discipline: '<i class="fas fa-graduation-cap text-purple-600 dark:text-purple-400 ml-2"></i>',
-            category: '<i class="fas fa-tag text-indigo-600 dark:text-indigo-400 ml-2"></i>',
-            observationFinding: '<i class="fas fa-eye text-blue-600 dark:text-blue-400 ml-2"></i>',
-            impact: '<i class="fas fa-exclamation-triangle text-orange-600 dark:text-orange-400 ml-2"></i>',
-            recommendation: '<i class="fas fa-lightbulb text-green-600 dark:text-green-400 ml-2"></i>',
-            importance: '<i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 ml-2"></i>',
-            urgency: '<i class="fas fa-clock text-yellow-600 dark:text-yellow-400 ml-2"></i>',
-            assignee: '<i class="fas fa-user text-teal-600 dark:text-teal-400 ml-2"></i>'
+            findingNumber: '<i class="fas fa-hashtag text-gray-600 dark:text-gray-400"></i>',
+            discipline: '<i class="fas fa-graduation-cap text-purple-600 dark:text-purple-400"></i>',
+            category: '<i class="fas fa-tag text-indigo-600 dark:text-indigo-400"></i>',
+            observationFinding: '<i class="fas fa-eye text-blue-600 dark:text-blue-400"></i>',
+            impact: '<i class="fas fa-exclamation-triangle text-orange-600 dark:text-orange-400"></i>',
+            recommendation: '<i class="fas fa-lightbulb text-green-600 dark:text-green-400"></i>',
+            importance: '<i class="fas fa-exclamation-circle text-red-600 dark:text-red-400"></i>',
+            urgency: '<i class="fas fa-clock text-yellow-600 dark:text-yellow-400"></i>',
+            assignee: '<i class="fas fa-user text-teal-600 dark:text-teal-400"></i>'
         };
         
         return icons[mapping[0]] || '';
