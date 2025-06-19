@@ -70,6 +70,14 @@
         .hamburger-button:hover {
             opacity: 0.7;
         }
+
+        .line-clamp-4 {
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen overflow-hidden">
@@ -2005,8 +2013,19 @@ class ProjectRenderer {
 class TableEditor {
     constructor(stateManager) {
         this.stateManager = stateManager;
-        this.visibleDropdowns = new Set(); // Add this line
+        this.visibleDropdowns = new Set();
+        this.expandedCells = new Set(); // Add this line
         this.setupKeyboardShortcuts();
+    }
+
+    toggleCellExpansion(actionId, colIndex) {
+        const key = `${actionId}-${colIndex}`;
+        if (this.expandedCells.has(key)) {
+            this.expandedCells.delete(key);
+        } else {
+            this.expandedCells.add(key);
+        }
+        app.renderManager.render();
     }
 
     toggleDropdown(projectId, columnIndex) {
@@ -2100,7 +2119,7 @@ class TableEditor {
                     </div>
                 </div>
                 
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                     <div class="flex justify-between items-center p-6 pb-4">
                         <h3 class="text-lg font-semibold">Imported Excel Data</h3>
                         <div class="flex gap-2">
@@ -2123,96 +2142,116 @@ class TableEditor {
                         </div>
                     </div>
                     
-                    <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                        <table class="w-full text-sm border-collapse" id="excel-table">
-                            <thead>
-                                <tr class="border-t border-b border-gray-200 dark:border-gray-700">
-                                    ${project.excelHeaders.map((header, index) => {
-                                        const mappedColumn = Object.entries(project.columnMapping).find(([key, val]) => val === index)?.[0];
-                                        const dropdownKey = `${project.id}-${index}`;
-                                        const showDropdown = !mappedColumn || this.visibleDropdowns.has(dropdownKey);
-                                        
-                                        return `
-                                            <th class="text-left py-3 px-4 font-semibold border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 relative">
-                                                <div class="flex items-center gap-2 ${mappedColumn && !isEditMode ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1' : ''}"
-                                                    ${mappedColumn && !isEditMode ? `onclick="app.tableEditor.toggleDropdown('${project.id}', ${index})"` : ''}>
-                                                    <span>${header}</span>
-                                                    ${this.getColumnIcon(project, index)}
-                                                </div>
-                                                ${showDropdown || isEditMode ? `
-                                                    <select id="column-mapping-${index}" 
-                                                            name="column-mapping-${index}"
-                                                            onchange="app.tableEditor.updateColumnMapping(${index}, this.value)" 
-                                                            class="mt-1 text-xs px-2 py-1 min-w-[120px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
-                                                            ${isEditMode ? 'disabled' : ''}>
-                                                        <option value="">Unmapped</option>
-                                                        <option value="findingNumber" ${project.columnMapping.findingNumber === index ? 'selected' : ''}>Finding #</option>
-                                                        <option value="discipline" ${project.columnMapping.discipline === index ? 'selected' : ''}>Discipline</option>
-                                                        <option value="category" ${project.columnMapping.category === index ? 'selected' : ''}>Category</option>
-                                                        <option value="observationFinding" ${project.columnMapping.observationFinding === index ? 'selected' : ''}>Observation/Finding*</option>
-                                                        <option value="impact" ${project.columnMapping.impact === index ? 'selected' : ''}>Impact</option>
-                                                        <option value="recommendation" ${project.columnMapping.recommendation === index ? 'selected' : ''}>Recommendation</option>
-                                                        <option value="importance" ${project.columnMapping.importance === index ? 'selected' : ''}>Importance</option>
-                                                        <option value="urgency" ${project.columnMapping.urgency === index ? 'selected' : ''}>Urgency</option>
-                                                        <option value="assignee" ${project.columnMapping.assignee === index ? 'selected' : ''}>Assignee</option>
-                                                    </select>
-                                                ` : ''}
-                                                ${isEditMode ? `
-                                                    <button onclick="app.tableEditor.deleteColumn(${index})" 
-                                                            class="absolute top-2 right-2 text-red-600 hover:text-red-700 opacity-0 hover:opacity-100 transition-opacity">
-                                                        <i class="fas fa-times text-xs"></i>
-                                                    </button>
-                                                ` : ''}
-                                            </th>
-                                        `;
-                                    }).join('')}
-                                    <th class="text-left py-3 px-4 font-semibold bg-gray-50 dark:bg-gray-900">
-                                        Comment
-                                        <div class="text-xs text-gray-500 dark:text-gray-400 font-normal mt-1">System</div>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${actions.map((action, rowIndex) => `
-                                    <tr class="border-b border-gray-200 dark:border-gray-700">
-                                        ${action.excelRowData.map((cell, colIndex) => `
-                                            <td class="py-3 px-4 border-r border-gray-200 dark:border-gray-700 ${
-                                                isEditMode ? 'cursor-text hover:bg-gray-50 dark:hover:bg-gray-700' : ''
-                                            }" 
-                                                data-row="${rowIndex}" 
-                                                data-col="${colIndex}"
-                                                ${isEditMode ? `onclick="app.tableEditor.startCellEdit(${rowIndex}, ${colIndex}, '${action.id}')"` : ''}>
-                                                ${colIndex === project.columnMapping.observationFinding && !isEditMode ? `
-                                                    <span class="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors" 
-                                                        onclick="app.selectActionForFocus('${action.id}')">
-                                                        ${cell || ''}
-                                                    </span>
-                                                ` : colIndex === project.columnMapping.assignee && !isEditMode && action.originalAssignee !== action.assignee && action.originalAssignee !== 'Unassigned' ? `
-                                                    <div>
-                                                        <span class="text-red-600 dark:text-red-400 line-through">${action.originalAssignee}</span>
-                                                        <br>
-                                                        <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
+                    <!-- Table wrapper with both scrollbars -->
+                    <div class="relative">
+                        <div class="overflow-auto max-h-[600px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                            <table class="w-full text-sm border-collapse" id="excel-table">
+                                <thead class="sticky top-0 z-10">
+                                    <tr class="border-t border-b border-gray-200 dark:border-gray-700">
+                                        ${project.excelHeaders.map((header, index) => {
+                                            const mappedColumn = Object.entries(project.columnMapping).find(([key, val]) => val === index)?.[0];
+                                            const dropdownKey = `${project.id}-${index}`;
+                                            const showDropdown = !mappedColumn || this.visibleDropdowns.has(dropdownKey);
+                                            
+                                            return `
+                                                <th class="text-left py-3 px-4 font-semibold border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 relative">
+                                                    <div class="flex items-center gap-2 ${mappedColumn && !isEditMode ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1' : ''}"
+                                                        ${mappedColumn && !isEditMode ? `onclick="app.tableEditor.toggleDropdown('${project.id}', ${index})"` : ''}>
+                                                        <span>${header}</span>
+                                                        ${this.getColumnIcon(project, index)}
                                                     </div>
-                                                ` : colIndex === project.columnMapping.assignee && !isEditMode && (!action.originalAssignee || action.originalAssignee === 'Unassigned') && action.assignee !== 'Unassigned' ? `
-                                                    <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
-                                                ` : isEditMode && this.stateManager.state.activeCell.row === rowIndex && this.stateManager.state.activeCell.col === colIndex ? `
-                                                    <input type="text" 
-                                                        id="active-cell-input"
-                                                        name="active-cell-input"
-                                                        value="${cell || ''}" 
-                                                        onblur="app.tableEditor.saveCellEdit('${action.id}', ${colIndex}, this.value)"
-                                                        onkeydown="app.tableEditor.handleCellKeydown(event, ${rowIndex}, ${colIndex}, '${action.id}')"
-                                                        class="w-full px-1 py-0 border-0 bg-transparent focus:outline-none">
-                                                ` : cell || ''}
-                                            </td>
-                                        `).join('')}
-                                        <td class="py-3 px-4">
-                                            <span class="text-xs text-gray-600 dark:text-gray-400">${action.getAllComments()}</span>
-                                        </td>
+                                                    ${showDropdown || isEditMode ? `
+                                                        <select id="column-mapping-${index}" 
+                                                                name="column-mapping-${index}"
+                                                                onchange="app.tableEditor.updateColumnMapping(${index}, this.value)" 
+                                                                class="mt-1 text-xs px-2 py-1 min-w-[120px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                                                                ${isEditMode ? 'disabled' : ''}>
+                                                            <option value="">Unmapped</option>
+                                                            <option value="findingNumber" ${project.columnMapping.findingNumber === index ? 'selected' : ''}>Finding #</option>
+                                                            <option value="discipline" ${project.columnMapping.discipline === index ? 'selected' : ''}>Discipline</option>
+                                                            <option value="category" ${project.columnMapping.category === index ? 'selected' : ''}>Category</option>
+                                                            <option value="observationFinding" ${project.columnMapping.observationFinding === index ? 'selected' : ''}>Observation/Finding*</option>
+                                                            <option value="impact" ${project.columnMapping.impact === index ? 'selected' : ''}>Impact</option>
+                                                            <option value="recommendation" ${project.columnMapping.recommendation === index ? 'selected' : ''}>Recommendation</option>
+                                                            <option value="importance" ${project.columnMapping.importance === index ? 'selected' : ''}>Importance</option>
+                                                            <option value="urgency" ${project.columnMapping.urgency === index ? 'selected' : ''}>Urgency</option>
+                                                            <option value="assignee" ${project.columnMapping.assignee === index ? 'selected' : ''}>Assignee</option>
+                                                        </select>
+                                                    ` : ''}
+                                                    ${isEditMode ? `
+                                                        <button onclick="app.tableEditor.deleteColumn(${index})" 
+                                                                class="absolute top-2 right-2 text-red-600 hover:text-red-700 opacity-0 hover:opacity-100 transition-opacity">
+                                                            <i class="fas fa-times text-xs"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </th>
+                                            `;
+                                        }).join('')}
+                                        <th class="text-left py-3 px-4 font-semibold bg-gray-50 dark:bg-gray-900 sticky right-0">
+                                            Comment
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 font-normal mt-1">System</div>
+                                        </th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${actions.map((action, rowIndex) => `
+                                        <tr class="border-b border-gray-200 dark:border-gray-700">
+                                            ${action.excelRowData.map((cell, colIndex) => {
+                                                const cellKey = `${action.id}-${colIndex}`;
+                                                const isExpanded = isEditMode || this.expandedCells.has(cellKey);
+                                                const cellContent = cell || '';
+                                                const isLongContent = cellContent.split('\n').length > 4 || cellContent.length > 200;
+                                                
+                                                return `
+                                                    <td class="py-3 px-4 border-r border-gray-200 dark:border-gray-700 ${
+                                                        isEditMode ? 'cursor-text hover:bg-gray-50 dark:hover:bg-gray-700' : ''
+                                                    } max-w-xs" 
+                                                        data-row="${rowIndex}" 
+                                                        data-col="${colIndex}"
+                                                        ${isEditMode ? `onclick="app.tableEditor.startCellEdit(${rowIndex}, ${colIndex}, '${action.id}')"` : ''}>
+                                                        ${colIndex === project.columnMapping.observationFinding && !isEditMode ? `
+                                                            <div class="${!isExpanded && isLongContent ? 'line-clamp-4' : ''} ${isLongContent && !isEditMode ? 'cursor-pointer' : ''}"
+                                                                ${isLongContent && !isEditMode ? `onclick="app.tableEditor.toggleCellExpansion('${action.id}', ${colIndex})"` : ''}>
+                                                                <span class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" 
+                                                                    onclick="event.stopPropagation(); app.selectActionForFocus('${action.id}')">
+                                                                    ${cellContent}
+                                                                </span>
+                                                                ${!isExpanded && isLongContent ? '<span class="text-blue-600 dark:text-blue-400 ml-1">...</span>' : ''}
+                                                            </div>
+                                                        ` : colIndex === project.columnMapping.assignee && !isEditMode && action.originalAssignee !== action.assignee && action.originalAssignee !== 'Unassigned' ? `
+                                                            <div>
+                                                                <span class="text-red-600 dark:text-red-400 line-through">${action.originalAssignee}</span>
+                                                                <br>
+                                                                <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
+                                                            </div>
+                                                        ` : colIndex === project.columnMapping.assignee && !isEditMode && (!action.originalAssignee || action.originalAssignee === 'Unassigned') && action.assignee !== 'Unassigned' ? `
+                                                            <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
+                                                        ` : isEditMode && this.stateManager.state.activeCell.row === rowIndex && this.stateManager.state.activeCell.col === colIndex ? `
+                                                            <textarea 
+                                                                id="active-cell-input"
+                                                                name="active-cell-input"
+                                                                onblur="app.tableEditor.saveCellEdit('${action.id}', ${colIndex}, this.value)"
+                                                                onkeydown="app.tableEditor.handleCellKeydown(event, ${rowIndex}, ${colIndex}, '${action.id}')"
+                                                                class="w-full px-1 py-0 border-0 bg-transparent focus:outline-none resize-none"
+                                                                rows="4">${cellContent}</textarea>
+                                                        ` : `
+                                                            <div class="${!isExpanded && isLongContent && !isEditMode ? 'line-clamp-4' : ''} ${isLongContent && !isEditMode ? 'cursor-pointer' : ''}"
+                                                                ${isLongContent && !isEditMode ? `onclick="app.tableEditor.toggleCellExpansion('${action.id}', ${colIndex})"` : ''}>
+                                                                ${cellContent}
+                                                                ${!isExpanded && isLongContent && !isEditMode ? '<span class="text-blue-600 dark:text-blue-400 ml-1">...</span>' : ''}
+                                                            </div>
+                                                        `}
+                                                    </td>
+                                                `;
+                                            }).join('')}
+                                            <td class="py-3 px-4 bg-gray-50 dark:bg-gray-900 sticky right-0">
+                                                <span class="text-xs text-gray-600 dark:text-gray-400">${action.getAllComments()}</span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2358,37 +2397,61 @@ class TableEditor {
         const actions = this.stateManager.getProjectActions(this.stateManager.state.selectedProjectId);
         const nextActionId = (r) => actions[r]?.id;
         
+        // For textarea in edit mode, we need to handle navigation differently
+        const isTextarea = event.target.tagName === 'TEXTAREA';
+        
         switch(event.key) {
             case 'Enter':
+                if (!isTextarea || event.ctrlKey) {
+                    event.preventDefault();
+                    if (row < maxRow) {
+                        this.saveCellEdit(actionId, col, event.target.value);
+                        this.startCellEdit(row + 1, col, nextActionId(row + 1));
+                    }
+                }
+                break;
             case 'ArrowDown':
-                event.preventDefault();
-                if (row < maxRow) {
-                    this.saveCellEdit(actionId, col, event.target.value);
-                    this.startCellEdit(row + 1, col, nextActionId(row + 1));
+                if (!isTextarea || event.ctrlKey) {
+                    event.preventDefault();
+                    if (row < maxRow) {
+                        this.saveCellEdit(actionId, col, event.target.value);
+                        this.startCellEdit(row + 1, col, nextActionId(row + 1));
+                    }
                 }
                 break;
             case 'ArrowUp':
-                event.preventDefault();
-                if (row > 0) {
-                    this.saveCellEdit(actionId, col, event.target.value);
-                    this.startCellEdit(row - 1, col, nextActionId(row - 1));
+                if (!isTextarea || event.ctrlKey) {
+                    event.preventDefault();
+                    if (row > 0) {
+                        this.saveCellEdit(actionId, col, event.target.value);
+                        this.startCellEdit(row - 1, col, nextActionId(row - 1));
+                    }
                 }
                 break;
             case 'ArrowRight':
+                if (!isTextarea || event.ctrlKey) {
+                    event.preventDefault();
+                    if (col < maxCol) {
+                        this.saveCellEdit(actionId, col, event.target.value);
+                        this.startCellEdit(row, col + 1, actionId);
+                    }
+                }
+                break;
             case 'Tab':
                 event.preventDefault();
-                if (col < maxCol) {
+                if (event.shiftKey && col > 0) {
+                    this.saveCellEdit(actionId, col, event.target.value);
+                    this.startCellEdit(row, col - 1, actionId);
+                } else if (!event.shiftKey && col < maxCol) {
                     this.saveCellEdit(actionId, col, event.target.value);
                     this.startCellEdit(row, col + 1, actionId);
                 }
                 break;
             case 'ArrowLeft':
-                if (event.shiftKey && event.key === 'Tab' || event.key === 'ArrowLeft') {
+                if ((!isTextarea || event.ctrlKey) && col > 0) {
                     event.preventDefault();
-                    if (col > 0) {
-                        this.saveCellEdit(actionId, col, event.target.value);
-                        this.startCellEdit(row, col - 1, actionId);
-                    }
+                    this.saveCellEdit(actionId, col, event.target.value);
+                    this.startCellEdit(row, col - 1, actionId);
                 }
                 break;
             case 'Escape':
