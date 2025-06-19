@@ -2059,7 +2059,7 @@ class ProjectRenderer {
             });
         }
         
-        // Get the current highest index number for this project
+        // Get the current highest index number for this project (for items without finding numbers)
         let maxIndex = 0;
         if (!this.stateManager.state.replaceMode) {
             const existingActions = this.stateManager.getProjectActions(projectId);
@@ -2070,13 +2070,17 @@ class ProjectRenderer {
             });
         }
         
+        let autoIndex = maxIndex + 1;
+        
         project.tempExcelData.forEach((row, index) => {
             const observationText = row[mappings.observationFinding];
             if (!observationText) return;
             
+            const findingNumber = mappings.findingNumber !== null ? row[mappings.findingNumber] : '';
+            
             const action = new Action({
-                findingNumber: mappings.findingNumber !== null ? row[mappings.findingNumber] : '',
-                indexNumber: maxIndex + index + 1, // Assign sequential index
+                findingNumber: findingNumber,
+                indexNumber: findingNumber || autoIndex++, // Use finding number as index if available, otherwise use auto-increment
                 discipline: mappings.discipline !== null ? row[mappings.discipline] : '',
                 category: mappings.category !== null ? row[mappings.category] : '',
                 observationFinding: observationText,
