@@ -398,6 +398,7 @@ class Action {
         
         // New fields
         this.findingNumber = data.findingNumber || '';
+        this.indexNumber = data.indexNumber || 0; // Add this line
         this.discipline = data.discipline || '';
         this.category = data.category || '';
         this.observationFinding = data.observationFinding || '';
@@ -408,7 +409,7 @@ class Action {
         
         this.personalPriority = data.personalPriority || 0;
         this.assignee = data.assignee || 'Unassigned';
-        this.originalAssignee = data.originalAssignee || data.assignee || 'Unassigned'; // Track original assignee
+        this.originalAssignee = data.originalAssignee || data.assignee || 'Unassigned';
         this.progress = data.progress || 0;
         this.tags = data.tags || [];
         this.projectId = data.projectId || null;
@@ -425,6 +426,7 @@ class Action {
             id: this.id,
             originalData: this.originalData,
             findingNumber: this.findingNumber,
+            indexNumber: this.indexNumber, // Add this line
             discipline: this.discipline,
             category: this.category,
             observationFinding: this.observationFinding,
@@ -445,6 +447,10 @@ class Action {
             excelRowData: this.excelRowData,
             taskList: this.taskList
         };
+    }
+
+    getDisplayNumber() {
+        return this.findingNumber || `${this.indexNumber}`;
     }
 
     static fromJSON(json) {
@@ -1480,6 +1486,7 @@ class OverviewRenderer {
                 
                 <h3 class="text-lg font-semibold mb-3 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full ${hasStarRating ? 'mt-8' : ''}"
                     onclick="event.stopPropagation(); app.selectActionForFocus('${action.id}')">
+                    <span class="text-sm font-normal text-gray-500 dark:text-gray-400 mr-2">${action.getDisplayNumber()}</span>
                     ${action.getCardTitle()}
                 </h3>
                 <div class="w-32 h-1 mb-3 cursor-pointer" 
@@ -2049,12 +2056,24 @@ class ProjectRenderer {
             });
         }
         
-        project.tempExcelData.forEach(row => {
+        // Get the current highest index number for this project
+        let maxIndex = 0;
+        if (!this.stateManager.state.replaceMode) {
+            const existingActions = this.stateManager.getProjectActions(projectId);
+            existingActions.forEach(action => {
+                if (action.indexNumber > maxIndex) {
+                    maxIndex = action.indexNumber;
+                }
+            });
+        }
+        
+        project.tempExcelData.forEach((row, index) => {
             const observationText = row[mappings.observationFinding];
             if (!observationText) return;
             
             const action = new Action({
                 findingNumber: mappings.findingNumber !== null ? row[mappings.findingNumber] : '',
+                indexNumber: maxIndex + index + 1, // Assign sequential index
                 discipline: mappings.discipline !== null ? row[mappings.discipline] : '',
                 category: mappings.category !== null ? row[mappings.category] : '',
                 observationFinding: observationText,
@@ -2091,13 +2110,26 @@ class TableEditor {
     }
 
     toggleCellExpansion(actionId, colIndex) {
+        // Get the scroll container
+        const scrollContainer = document.querySelector('.overflow-auto.max-h-\\[600px\\]');
+        const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+        
         const key = `${actionId}-${colIndex}`;
         if (this.expandedCells.has(key)) {
             this.expandedCells.delete(key);
         } else {
             this.expandedCells.add(key);
         }
+        
         app.renderManager.render();
+        
+        // Restore scroll position after render
+        setTimeout(() => {
+            const newScrollContainer = document.querySelector('.overflow-auto.max-h-\\[600px\\]');
+            if (newScrollContainer) {
+                newScrollContainer.scrollTop = scrollTop;
+            }
+        }, 0);
     }
 
     toggleDropdown(projectId, columnIndex) {
@@ -2147,6 +2179,7 @@ class TableEditor {
     renderProjectDataTable(project) {
         const actions = this.stateManager.getProjectActions(project.id);
         const isEditMode = this.stateManager.state.tableEditMode;
+        const hasFindingNumberMapping = project.columnMapping.findingNumber !== null;
         
         return `
             <div class="space-y-6">
@@ -2220,6 +2253,14 @@ class TableEditor {
                             <table class="w-full text-sm border-collapse" id="excel-table">
                                 <thead class="sticky top-0 z-10">
                                     <tr class="border-t border-b border-gray-200 dark:border-gray-700">
+                                        ${!hasFindingNumberMapping ? `
+                                            <th class="text-left py-3 px-4 font-semibold border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                                                <div class="flex items-center gap-2">
+                                                    <span>Finding #</span>
+                                                    <i class="fas fa-hashtag text-gray-600 dark:text-gray-400"></i>
+                                                </div>
+                                            </th>
+                                        ` : ''}
                                         ${project.excelHeaders.map((header, index) => {
                                             const mappedColumn = Object.entries(project.columnMapping).find(([key, val]) => val === index)?.[0];
                                             const dropdownKey = `${project.id}-${index}`;
@@ -2268,36 +2309,48 @@ class TableEditor {
                                 <tbody>
                                     ${actions.map((action, rowIndex) => `
                                         <tr class="border-b border-gray-200 dark:border-gray-700">
+                                            ${!hasFindingNumberMapping ? `
+                                                <td class="py-3 px-4 border-r border-gray-200 dark:border-gray-700 align-top">
+                                                    <span class="cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium" 
+                                                        onclick="app.selectActionForFocus('${action.id}')">
+                                                        ${action.getDisplayNumber()}
+                                                    </span>
+                                                </td>
+                                            ` : ''}
                                             ${action.excelRowData.map((cell, colIndex) => {
                                                 const cellKey = `${action.id}-${colIndex}`;
                                                 const isExpanded = isEditMode || this.expandedCells.has(cellKey);
                                                 const cellContent = cell || '';
-                                                const isLongContent = cellContent.split('\n').length > 4 || cellContent.length > 200;
+                                                // Adjusted logic: check for actual newlines OR approximate visual lines based on character count
+                                                // Assuming roughly 50 characters per line for the max-w-xs width
+                                                const isLongContent = cellContent.split('\n').length > 4 || cellContent.length > 150;
                                                 
                                                 return `
-                                                    <td class="py-3 px-4 border-r border-gray-200 dark:border-gray-700 ${
+                                                    <td class="py-3 px-4 border-r border-gray-200 dark:border-gray-700 align-top ${
                                                         isEditMode ? 'cursor-text hover:bg-gray-50 dark:hover:bg-gray-700' : ''
                                                     } max-w-xs" 
                                                         data-row="${rowIndex}" 
                                                         data-col="${colIndex}"
                                                         ${isEditMode ? `onclick="app.tableEditor.startCellEdit(${rowIndex}, ${colIndex}, '${action.id}')"` : ''}>
-                                                        ${colIndex === project.columnMapping.observationFinding && !isEditMode ? `
-                                                            <div class="${!isExpanded && isLongContent ? 'line-clamp-4' : ''} ${isLongContent && !isEditMode ? 'cursor-pointer' : ''}"
-                                                                ${isLongContent && !isEditMode ? `onclick="app.tableEditor.toggleCellExpansion('${action.id}', ${colIndex})"` : ''}>
-                                                                <span class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" 
-                                                                    onclick="event.stopPropagation(); app.selectActionForFocus('${action.id}')">
-                                                                    ${cellContent}
-                                                                </span>
-                                                                ${!isExpanded && isLongContent ? '<span class="text-blue-600 dark:text-blue-400 ml-1">...</span>' : ''}
-                                                            </div>
+                                                        ${colIndex === project.columnMapping.findingNumber && !isEditMode ? `
+                                                            <span class="cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium" 
+                                                                onclick="app.selectActionForFocus('${action.id}')">
+                                                                ${action.getDisplayNumber()}
+                                                            </span>
                                                         ` : colIndex === project.columnMapping.assignee && !isEditMode && action.originalAssignee !== action.assignee && action.originalAssignee !== 'Unassigned' ? `
-                                                            <div>
+                                                            <div class="${!isExpanded && isLongContent ? 'line-clamp-4' : ''} ${isLongContent ? 'cursor-pointer' : ''}"
+                                                                ${isLongContent ? `onclick="app.tableEditor.toggleCellExpansion('${action.id}', ${colIndex})"` : ''}>
                                                                 <span class="text-red-600 dark:text-red-400 line-through">${action.originalAssignee}</span>
                                                                 <br>
                                                                 <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
+                                                                ${!isExpanded && isLongContent ? '<span class="text-blue-600 dark:text-blue-400 ml-1">...</span>' : ''}
                                                             </div>
                                                         ` : colIndex === project.columnMapping.assignee && !isEditMode && (!action.originalAssignee || action.originalAssignee === 'Unassigned') && action.assignee !== 'Unassigned' ? `
-                                                            <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
+                                                            <div class="${!isExpanded && isLongContent ? 'line-clamp-4' : ''} ${isLongContent ? 'cursor-pointer' : ''}"
+                                                                ${isLongContent ? `onclick="app.tableEditor.toggleCellExpansion('${action.id}', ${colIndex})"` : ''}>
+                                                                <span class="text-green-600 dark:text-green-400">${action.assignee}</span>
+                                                                ${!isExpanded && isLongContent ? '<span class="text-blue-600 dark:text-blue-400 ml-1">...</span>' : ''}
+                                                            </div>
                                                         ` : isEditMode && this.stateManager.state.activeCell.row === rowIndex && this.stateManager.state.activeCell.col === colIndex ? `
                                                             <textarea 
                                                                 id="active-cell-input"
@@ -2307,7 +2360,7 @@ class TableEditor {
                                                                 class="w-full px-1 py-0 border-0 bg-transparent focus:outline-none resize-none"
                                                                 rows="4">${cellContent}</textarea>
                                                         ` : `
-                                                            <div class="${!isExpanded && isLongContent && !isEditMode ? 'line-clamp-4' : ''} ${isLongContent && !isEditMode ? 'cursor-pointer' : ''}"
+                                                            <div class="${!isExpanded && !isEditMode ? 'line-clamp-4' : ''} ${isLongContent && !isEditMode ? 'cursor-pointer' : ''}"
                                                                 ${isLongContent && !isEditMode ? `onclick="app.tableEditor.toggleCellExpansion('${action.id}', ${colIndex})"` : ''}>
                                                                 ${cellContent}
                                                                 ${!isExpanded && isLongContent && !isEditMode ? '<span class="text-blue-600 dark:text-blue-400 ml-1">...</span>' : ''}
@@ -2316,7 +2369,7 @@ class TableEditor {
                                                     </td>
                                                 `;
                                             }).join('')}
-                                            <td class="py-3 px-4 bg-gray-50 dark:bg-gray-900 sticky right-0">
+                                            <td class="py-3 px-4 bg-gray-50 dark:bg-gray-900 sticky right-0 align-top">
                                                 <span class="text-xs text-gray-600 dark:text-gray-400">${action.getAllComments()}</span>
                                             </td>
                                         </tr>
